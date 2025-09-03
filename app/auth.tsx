@@ -25,7 +25,7 @@ export default function AuthScreen() {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { signIn, signUp, resetPassword, session, user } = useAuth();
 
   const primaryColor = useThemeColor({}, 'primary');
   const secondaryColor = useThemeColor({}, 'secondary');
@@ -195,6 +195,15 @@ export default function AuthScreen() {
           <ThemedText style={styles.footerSubtext}>
             Notifcar v1.0.0 - Sécurisé par Supabase
           </ThemedText>
+          
+          {/* Debug info - à supprimer en production */}
+          {__DEV__ && (
+            <ThemedView style={styles.debugContainer}>
+              <ThemedText style={styles.debugText}>
+                Debug: {session ? `Connecté (${user?.email})` : 'Non connecté'}
+              </ThemedText>
+            </ThemedView>
+          )}
         </ThemedView>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -330,5 +339,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     opacity: 0.5,
     fontStyle: 'italic',
+  },
+  debugContainer: {
+    marginTop: 10,
+    padding: 8,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 4,
+  },
+  debugText: {
+    fontSize: 10,
+    opacity: 0.7,
+    fontFamily: 'monospace',
   },
 });

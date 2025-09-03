@@ -157,6 +157,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
+    position: 'absolute',
     backgroundColor: 'transparent',
   },
   header: {
