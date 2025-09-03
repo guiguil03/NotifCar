@@ -1,30 +1,39 @@
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Animated, Dimensions, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Animated, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-const { width } = Dimensions.get('window');
+// const { width, height } = Dimensions.get('window');
 
 export default function HomeScreen() {
+  const { user } = useAuth();
   const primaryColor = useThemeColor({}, 'primary');
   const secondaryColor = useThemeColor({}, 'secondary');
-  const cardColor = useThemeColor({}, 'card');
-  const borderColor = useThemeColor({}, 'border');
   const successColor = useThemeColor({}, 'success');
+  // const warningColor = useThemeColor({}, 'warning');
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const headerSlideAnim = useRef(new Animated.Value(-30)).current;
+  const cardAnimations = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0)
+  ]).current;
 
   useEffect(() => {
+    // Animation d'entrée principale
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 1000,
+        duration: 800,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
@@ -32,354 +41,577 @@ export default function HomeScreen() {
         duration: 800,
         useNativeDriver: true,
       }),
-      Animated.spring(scaleAnim, {
+      Animated.timing(scaleAnim, {
         toValue: 1,
-        tension: 50,
-        friction: 7,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(headerSlideAnim, {
+        toValue: 0,
+        duration: 600,
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+
+    // Animations en cascade pour les cartes
+    cardAnimations.forEach((anim, index) => {
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 600,
+        delay: 200 + (index * 100),
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [fadeAnim, slideAnim, scaleAnim, headerSlideAnim, cardAnimations]);
 
   const handleScanQR = () => {
-    router.push('/scan');
+    router.push('/(tabs)/scan');
   };
 
   const handleMyVehicles = () => {
-    router.push('/vehicles');
+    router.push('/(tabs)/vehicles');
   };
 
   const handleNotifications = () => {
-    router.push('/notifications');
+    router.push('/(tabs)/notifications');
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Bonjour';
+    if (hour < 18) return 'Bon après-midi';
+    return 'Bonsoir';
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header avec logo et slogan */}
-      <Animated.View 
-        style={[
-          styles.header, 
-          { 
-            backgroundColor: primaryColor,
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
+      
+      {/* Header avec gradient */}
+      <LinearGradient
+        colors={['#1E3A8A', '#3B82F6', '#60A5FA']}
+        style={styles.headerGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
-        <ThemedView style={styles.headerContent}>
-          <ThemedView style={[styles.logoContainer, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-            <Ionicons name="car-sport" size={40} color="white" />
-          </ThemedView>
-          <ThemedText style={styles.logo}>Notifcar</ThemedText>
-          <ThemedText style={styles.slogan}>Votre véhicule vous parle, écoutez-le</ThemedText>
-        </ThemedView>
-      </Animated.View>
-
-      {/* Actions principales */}
-      <Animated.View 
-        style={[
-          styles.actionsContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }, { scale: scaleAnim }]
-          }
-        ]}
-      >
-        <TouchableOpacity 
-          style={[styles.actionButton, { backgroundColor: secondaryColor }]}
-          onPress={handleScanQR}
-          activeOpacity={0.8}
+        <Animated.View
+          style={[
+            styles.header,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: headerSlideAnim }]
+            }
+          ]}
         >
-          <ThemedView style={styles.actionButtonContent}>
-            <ThemedView style={styles.actionIconContainer}>
-              <Ionicons name="qr-code-outline" size={32} color="white" />
-            </ThemedView>
-            <ThemedText style={styles.actionButtonText}>Scanner QR Code</ThemedText>
-            <ThemedText style={styles.actionButtonSubtext}>Notifier un véhicule en 3 clics</ThemedText>
-          </ThemedView>
-        </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <View style={styles.logoContainer}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.logoGradient}
+              >
+                <Ionicons name="car-sport" size={28} color="#1E3A8A" />
+              </LinearGradient>
+            </View>
+            
+            <View style={styles.welcomeSection}>
+              <ThemedText style={styles.greetingText}>
+                {getGreeting()}{user?.user_metadata?.full_name ? ` ${user.user_metadata.full_name.split(' ')[0]}` : ''} !
+              </ThemedText>
+              <ThemedText style={styles.subtitleText}>
+                Votre sécurité automobile en un clic
+              </ThemedText>
+            </View>
+          </View>
+        </Animated.View>
+      </LinearGradient>
 
-        <ThemedView style={styles.quickActions}>
-          <TouchableOpacity 
-            style={[styles.quickAction, { backgroundColor: cardColor, borderColor }]}
-            onPress={handleMyVehicles}
-            activeOpacity={0.7}
-          >
-            <ThemedView style={[styles.quickActionIcon, { backgroundColor: primaryColor }]}>
-              <Ionicons name="car-outline" size={24} color="white" />
-            </ThemedView>
-            <ThemedText style={styles.quickActionText}>Mes Véhicules</ThemedText>
-            <ThemedText style={styles.quickActionSubtext}>1 véhicule</ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.quickAction, { backgroundColor: cardColor, borderColor }]}
-            onPress={handleNotifications}
-            activeOpacity={0.7}
-          >
-            <ThemedView style={[styles.quickActionIcon, { backgroundColor: secondaryColor }]}>
-              <Ionicons name="notifications-outline" size={24} color="white" />
-            </ThemedView>
-            <ThemedText style={styles.quickActionText}>Notifications</ThemedText>
-            <ThemedView style={[styles.notificationBadge, { backgroundColor: secondaryColor }]}>
-              <ThemedText style={styles.notificationBadgeText}>3</ThemedText>
-            </ThemedView>
-          </TouchableOpacity>
-        </ThemedView>
-      </Animated.View>
-
-      {/* Statistiques rapides */}
-      <Animated.View 
-        style={[
-          styles.statsContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}
+      <ScrollView 
+        style={styles.scrollContainer} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
-        <ThemedText style={styles.sectionTitle}>Aperçu</ThemedText>
-        <ThemedView style={styles.statsGrid}>
-          <ThemedView style={[styles.statCard, { backgroundColor: cardColor, borderColor }]}>
-            <ThemedView style={[styles.statIcon, { backgroundColor: primaryColor }]}>
-              <Ionicons name="car" size={20} color="white" />
-            </ThemedView>
-            <ThemedText style={styles.statNumber}>1</ThemedText>
-            <ThemedText style={styles.statLabel}>Véhicule actif</ThemedText>
-          </ThemedView>
-          <ThemedView style={[styles.statCard, { backgroundColor: cardColor, borderColor }]}>
-            <ThemedView style={[styles.statIcon, { backgroundColor: secondaryColor }]}>
-              <Ionicons name="notifications" size={20} color="white" />
-            </ThemedView>
-            <ThemedText style={styles.statNumber}>3</ThemedText>
-            <ThemedText style={styles.statLabel}>Notifications</ThemedText>
-          </ThemedView>
-          <ThemedView style={[styles.statCard, { backgroundColor: cardColor, borderColor }]}>
-            <ThemedView style={[styles.statIcon, { backgroundColor: successColor }]}>
-              <Ionicons name="shield-checkmark" size={20} color="white" />
-            </ThemedView>
-            <ThemedText style={styles.statNumber}>100%</ThemedText>
-            <ThemedText style={styles.statLabel}>Sécurisé</ThemedText>
-          </ThemedView>
-        </ThemedView>
-      </Animated.View>
+        {/* Action principale avec design premium */}
+        <Animated.View 
+          style={[
+            styles.mainActionContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }, { scale: scaleAnim }]
+            }
+          ]}
+        >
+          <TouchableOpacity 
+            style={styles.mainActionButton}
+            onPress={handleScanQR}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#1E3A8A', '#3B82F6']}
+              style={styles.mainActionGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.mainActionContent}>
+                <View style={styles.mainActionIcon}>
+                  <Ionicons name="qr-code" size={32} color="white" />
+                </View>
+                <View style={styles.mainActionTextContainer}>
+                  <ThemedText style={styles.mainActionTitle}>Scanner QR Code</ThemedText>
+                  <ThemedText style={styles.mainActionSubtitle}>
+                    Notifier un véhicule instantanément
+                  </ThemedText>
+                </View>
+                <View style={styles.arrowContainer}>
+                  <Ionicons name="arrow-forward" size={24} color="rgba(255,255,255,0.8)" />
+                </View>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
 
-      {/* Guide d'utilisation */}
-      <Animated.View 
-        style={[
-          styles.guideContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}
-      >
-        <ThemedText style={styles.sectionTitle}>Comment ça marche ?</ThemedText>
-        <ThemedView style={styles.guideSteps}>
-          <ThemedView style={styles.guideStep}>
-            <ThemedView style={[styles.stepNumber, { backgroundColor: primaryColor }]}>
-              <ThemedText style={styles.stepNumberText}>1</ThemedText>
-            </ThemedView>
-            <ThemedView style={styles.stepContent}>
-              <ThemedText style={styles.stepTitle}>Enregistrez votre véhicule</ThemedText>
-              <ThemedText style={styles.stepDescription}>Ajoutez vos véhicules et obtenez un QR code unique</ThemedText>
-            </ThemedView>
-          </ThemedView>
+        {/* Actions rapides avec design moderne */}
+        <View style={styles.quickActionsContainer}>
+          <ThemedText style={styles.sectionTitle}>Accès rapide</ThemedText>
+          
+          <View style={styles.quickActionsGrid}>
+            <Animated.View
+              style={[
+                styles.quickActionWrapper,
+                {
+                  opacity: cardAnimations[0],
+                  transform: [{
+                    translateY: cardAnimations[0].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [30, 0]
+                    })
+                  }]
+                }
+              ]}
+            >
+              <TouchableOpacity 
+                style={styles.quickActionCard}
+                onPress={handleMyVehicles}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={['#FFFFFF', '#F8FAFC']}
+                  style={styles.quickActionGradient}
+                >
+                  <View style={styles.quickActionHeader}>
+                    <View style={[styles.quickActionIcon, { backgroundColor: primaryColor }]}>
+                      <Ionicons name="car" size={20} color="white" />
+                    </View>
+                    <View style={styles.quickActionArrow}>
+                      <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                    </View>
+                  </View>
+                  <ThemedText style={styles.quickActionTitle}>Mes Véhicules</ThemedText>
+                  <ThemedText style={styles.quickActionCount}>1 véhicule actif</ThemedText>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
 
-          <ThemedView style={styles.guideStep}>
-            <ThemedView style={[styles.stepNumber, { backgroundColor: primaryColor }]}>
-              <ThemedText style={styles.stepNumberText}>2</ThemedText>
-            </ThemedView>
-            <ThemedView style={styles.stepContent}>
-              <ThemedText style={styles.stepTitle}>Collez le QR code</ThemedText>
-              <ThemedText style={styles.stepDescription}>Apposez le QR code sur votre pare-brise</ThemedText>
-            </ThemedView>
-          </ThemedView>
+            <Animated.View
+              style={[
+                styles.quickActionWrapper,
+                {
+                  opacity: cardAnimations[1],
+                  transform: [{
+                    translateY: cardAnimations[1].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [30, 0]
+                    })
+                  }]
+                }
+              ]}
+            >
+              <TouchableOpacity 
+                style={styles.quickActionCard}
+                onPress={handleNotifications}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={['#FFFFFF', '#F8FAFC']}
+                  style={styles.quickActionGradient}
+                >
+                  <View style={styles.quickActionHeader}>
+                    <View style={[styles.quickActionIcon, { backgroundColor: secondaryColor }]}>
+                      <Ionicons name="notifications" size={20} color="white" />
+                    </View>
+                    <View style={styles.quickActionArrow}>
+                      <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                    </View>
+                  </View>
+                  <ThemedText style={styles.quickActionTitle}>Notifications</ThemedText>
+                  <View style={styles.notificationBadge}>
+                    <View style={[styles.notificationDot, { backgroundColor: secondaryColor }]} />
+                    <ThemedText style={styles.quickActionCount}>3 nouvelles</ThemedText>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        </View>
 
-          <ThemedView style={styles.guideStep}>
-            <ThemedView style={[styles.stepNumber, { backgroundColor: primaryColor }]}>
-              <ThemedText style={styles.stepNumberText}>3</ThemedText>
-            </ThemedView>
-            <ThemedView style={styles.stepContent}>
-              <ThemedText style={styles.stepTitle}>Recevez les notifications</ThemedText>
-              <ThemedText style={styles.stepDescription}>Soyez alerté instantanément en cas de problème</ThemedText>
-            </ThemedView>
-          </ThemedView>
-        </ThemedView>
-      </Animated.View>
-    </ScrollView>
+        {/* Statistiques avec design sophistiqué */}
+        <Animated.View 
+          style={[
+            styles.statsContainer,
+            {
+              opacity: cardAnimations[2],
+              transform: [{
+                translateY: cardAnimations[2].interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [30, 0]
+                })
+              }]
+            }
+          ]}
+        >
+          <ThemedText style={styles.sectionTitle}>Vue d&apos;ensemble</ThemedText>
+          
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.statGradient}
+              >
+                <View style={[styles.statIcon, { backgroundColor: primaryColor }]}>
+                  <Ionicons name="car" size={20} color="white" />
+                </View>
+                <ThemedText style={[styles.statNumber, { color: primaryColor }]}>1</ThemedText>
+                <ThemedText style={styles.statLabel}>Véhicule</ThemedText>
+              </LinearGradient>
+            </View>
+            
+            <View style={styles.statCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.statGradient}
+              >
+                <View style={[styles.statIcon, { backgroundColor: secondaryColor }]}>
+                  <Ionicons name="alert-circle" size={20} color="white" />
+                </View>
+                <ThemedText style={[styles.statNumber, { color: secondaryColor }]}>3</ThemedText>
+                <ThemedText style={styles.statLabel}>Alertes</ThemedText>
+              </LinearGradient>
+            </View>
+            
+            <View style={styles.statCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.statGradient}
+              >
+                <View style={[styles.statIcon, { backgroundColor: successColor }]}>
+                  <Ionicons name="shield-checkmark" size={20} color="white" />
+                </View>
+                <ThemedText style={[styles.statNumber, { color: successColor }]}>100%</ThemedText>
+                <ThemedText style={styles.statLabel}>Sécurisé</ThemedText>
+              </LinearGradient>
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Guide d'utilisation avec design moderne */}
+        <Animated.View 
+          style={[
+            styles.guideContainer,
+            {
+              opacity: cardAnimations[3],
+              transform: [{
+                translateY: cardAnimations[3].interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [30, 0]
+                })
+              }]
+            }
+          ]}
+        >
+          <ThemedText style={styles.sectionTitle}>Comment ça marche ?</ThemedText>
+          
+          <View style={styles.guideSteps}>
+            <View style={styles.guideStep}>
+              <LinearGradient
+                colors={[primaryColor, '#3B82F6']}
+                style={styles.stepIndicator}
+              >
+                <ThemedText style={styles.stepNumber}>1</ThemedText>
+              </LinearGradient>
+              <View style={styles.stepContent}>
+                <ThemedText style={styles.stepTitle}>Enregistrez</ThemedText>
+                <ThemedText style={styles.stepDescription}>
+                  Ajoutez vos véhicules dans l&apos;application
+        </ThemedText>
+              </View>
+            </View>
+
+            <View style={styles.guideStep}>
+              <LinearGradient
+                colors={[primaryColor, '#3B82F6']}
+                style={styles.stepIndicator}
+              >
+                <ThemedText style={styles.stepNumber}>2</ThemedText>
+              </LinearGradient>
+              <View style={styles.stepContent}>
+                <ThemedText style={styles.stepTitle}>Collez</ThemedText>
+                <ThemedText style={styles.stepDescription}>
+                  QR code sur le pare-brise de votre véhicule
+        </ThemedText>
+              </View>
+            </View>
+
+            <View style={styles.guideStep}>
+              <LinearGradient
+                colors={[primaryColor, '#3B82F6']}
+                style={styles.stepIndicator}
+              >
+                <ThemedText style={styles.stepNumber}>3</ThemedText>
+              </LinearGradient>
+              <View style={styles.stepContent}>
+                <ThemedText style={styles.stepTitle}>Recevez</ThemedText>
+                <ThemedText style={styles.stepDescription}>
+                  Notifications instantanées en cas d&apos;incident
+        </ThemedText>
+              </View>
+            </View>
+          </View>
+        </Animated.View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  headerGradient: {
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 24,
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: 40,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    // Animation handled by Animated.View
   },
   headerContent: {
     alignItems: 'center',
   },
   logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    marginBottom: 20,
+  },
+  logoGradient: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  logo: {
-    fontSize: 32,
-    fontWeight: 'bold',
+  welcomeSection: {
+    alignItems: 'center',
+  },
+  greetingText: {
+    fontSize: 28,
+    fontWeight: '700',
     color: 'white',
     marginBottom: 8,
-  },
-  slogan: {
-    fontSize: 16,
-    color: 'white',
     textAlign: 'center',
-    opacity: 0.9,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  subtitleText: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
     lineHeight: 22,
+    fontWeight: '500',
   },
-  actionsContainer: {
-    padding: 20,
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  mainActionContainer: {
+    paddingHorizontal: 24,
     marginTop: -20,
+    marginBottom: 32,
   },
-  actionButton: {
+  mainActionButton: {
+    borderRadius: 24,
+    shadowColor: '#1E3A8A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  mainActionGradient: {
+    borderRadius: 24,
+    padding: 24,
+  },
+  mainActionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  mainActionIcon: {
+    width: 64,
+    height: 64,
     borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 20,
+  },
+  mainActionTextContainer: {
+    flex: 1,
+  },
+  mainActionTitle: {
+    color: 'white',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 6,
+    letterSpacing: -0.5,
+  },
+  mainActionSubtitle: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  arrowContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickActionsContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
     marginBottom: 20,
+    color: '#1F2937',
+    letterSpacing: -0.3,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  quickActionWrapper: {
+    flex: 1,
+  },
+  quickActionCard: {
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  quickActionGradient: {
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  quickActionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  quickActionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 4,
   },
-  actionButtonContent: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  actionIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  actionButtonText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  actionButtonSubtext: {
-    color: 'white',
-    fontSize: 14,
-    opacity: 0.9,
-    textAlign: 'center',
-  },
-  quickActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  quickAction: {
-    flex: 1,
-    padding: 20,
-    borderRadius: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  quickActionText: {
-    fontSize: 14,
+  quickActionTitle: {
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 4,
-    textAlign: 'center',
+    marginBottom: 8,
+    color: '#1F2937',
+    letterSpacing: -0.2,
   },
-  quickActionSubtext: {
-    fontSize: 12,
-    opacity: 0.7,
-    textAlign: 'center',
+  quickActionCount: {
+    fontSize: 13,
+    color: '#6B7280',
   },
   notificationBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
+    gap: 8,
   },
-  notificationBadgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
+  notificationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  quickActionArrow: {
+    // Arrow positioning handled by flexDirection in header
   },
   statsContainer: {
-    padding: 20,
+    paddingHorizontal: 24,
+    marginBottom: 32,
   },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  statsGrid: {
+  statsRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 16,
   },
   statCard: {
     flex: 1,
-    padding: 20,
-    borderRadius: 16,
-    alignItems: 'center',
-    borderWidth: 1,
+    borderRadius: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  statGradient: {
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
   },
   statIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
   },
   statNumber: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 4,
+    letterSpacing: -0.5,
   },
   statLabel: {
     fontSize: 12,
+    color: '#6B7280',
     textAlign: 'center',
-    opacity: 0.7,
-    lineHeight: 16,
+    fontWeight: '500',
   },
   guideContainer: {
-    padding: 20,
+    paddingHorizontal: 24,
     paddingBottom: 40,
   },
   guideSteps: {
@@ -387,38 +619,39 @@ const styles = StyleSheet.create({
   },
   guideStep: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 16,
+    alignItems: 'center',
+    gap: 20,
   },
-  stepNumber: {
+  stepIndicator: {
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: '#1E3A8A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  stepNumberText: {
+  stepNumber: {
     color: 'white',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   stepContent: {
     flex: 1,
-    paddingTop: 4,
   },
   stepTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 6,
+    marginBottom: 4,
+    color: '#1F2937',
+    letterSpacing: -0.2,
   },
   stepDescription: {
     fontSize: 14,
-    opacity: 0.7,
+    color: '#6B7280',
     lineHeight: 20,
   },
 });

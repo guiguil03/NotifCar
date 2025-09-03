@@ -1,25 +1,57 @@
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, TouchableOpacity } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View, Animated, StatusBar } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ProfileScreen() {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [locationEnabled, setLocationEnabled] = useState(false);
-  
   const { user, signOut } = useAuth();
   const primaryColor = useThemeColor({}, 'primary');
   const secondaryColor = useThemeColor({}, 'secondary');
-  const cardColor = useThemeColor({}, 'card');
-  const borderColor = useThemeColor({}, 'border');
-  const colorScheme = useColorScheme();
+  const successColor = useThemeColor({}, 'success');
+  const warningColor = useThemeColor({}, 'warning');
+  const errorColor = useThemeColor({}, 'error');
 
-  const handleLogout = async () => {
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const cardAnimations = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
+
+  useEffect(() => {
+    // Animation d'entrée
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Animations en cascade pour les cartes
+    cardAnimations.forEach((anim, index) => {
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 600,
+        delay: 200 + (index * 100),
+        useNativeDriver: true,
+      }).start();
+    });
+  }, []);
+
+  const handleLogout = () => {
     Alert.alert(
       'Déconnexion',
       'Êtes-vous sûr de vouloir vous déconnecter ?',
@@ -28,355 +60,504 @@ export default function ProfileScreen() {
         {
           text: 'Déconnexion',
           style: 'destructive',
-          onPress: async () => {
-            const { error } = await signOut();
-            if (error) {
-              Alert.alert('Erreur', error.message);
-            }
-          },
+          onPress: () => signOut(),
         },
       ]
     );
   };
 
-  const handleContactSupport = () => {
-    Alert.alert('Support', 'Fonctionnalité de contact support à implémenter');
+  const handleSettings = () => {
+    Alert.alert('Paramètres', 'Fonctionnalité de paramètres à implémenter');
   };
 
-  const handlePrivacyPolicy = () => {
-    Alert.alert('Politique de confidentialité', 'Fonctionnalité à implémenter');
+  const handleHelp = () => {
+    Alert.alert('Aide', 'Fonctionnalité d\'aide à implémenter');
   };
 
-  const handleTermsOfService = () => {
-    Alert.alert('Conditions d\'utilisation', 'Fonctionnalité à implémenter');
+  const handleAbout = () => {
+    Alert.alert('À propos', 'Notifcar v1.0.0\n\nApplication de notification automobile');
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <ThemedView style={[styles.header, { backgroundColor: primaryColor }]}>
-        <ThemedView style={styles.profileInfo}>
-          <ThemedView style={[styles.avatar, { backgroundColor: 'white' }]}>
-            <Ionicons name="person" size={40} color={primaryColor} />
-          </ThemedView>
-          <ThemedView style={styles.userInfo}>
-            <ThemedText style={styles.userName}>
-              {user?.user_metadata?.full_name || 'Utilisateur Notifcar'}
-            </ThemedText>
-            <ThemedText style={styles.userEmail}>{user?.email || 'user@notifcar.com'}</ThemedText>
-          </ThemedView>
-        </ThemedView>
-      </ThemedView>
-
-      {/* Statistiques utilisateur */}
-      <ThemedView style={styles.statsContainer}>
-        <ThemedView style={[styles.statCard, { backgroundColor: cardColor, borderColor }]}>
-          <Ionicons name="car-outline" size={24} color={primaryColor} />
-          <ThemedText style={styles.statNumber}>1</ThemedText>
-          <ThemedText style={styles.statLabel}>Véhicule</ThemedText>
-        </ThemedView>
-        
-        <ThemedView style={[styles.statCard, { backgroundColor: cardColor, borderColor }]}>
-          <Ionicons name="notifications-outline" size={24} color={secondaryColor} />
-          <ThemedText style={styles.statNumber}>3</ThemedText>
-          <ThemedText style={styles.statLabel}>Notifications</ThemedText>
-        </ThemedView>
-        
-        <ThemedView style={[styles.statCard, { backgroundColor: cardColor, borderColor }]}>
-          <Ionicons name="qr-code-outline" size={24} color={primaryColor} />
-          <ThemedText style={styles.statNumber}>1</ThemedText>
-          <ThemedText style={styles.statLabel}>QR Code</ThemedText>
-        </ThemedView>
-      </ThemedView>
-
-      {/* Paramètres */}
-      <ThemedView style={styles.settingsContainer}>
-        <ThemedText style={styles.sectionTitle}>Paramètres</ThemedText>
-        
-        <ThemedView style={[styles.settingItem, { backgroundColor: cardColor, borderColor }]}>
-          <ThemedView style={styles.settingInfo}>
-            <Ionicons name="notifications-outline" size={24} color={primaryColor} />
-            <ThemedView style={styles.settingText}>
-              <ThemedText style={styles.settingTitle}>Notifications push</ThemedText>
-              <ThemedText style={styles.settingDescription}>
-                Recevoir des notifications en temps réel
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
+      
+      {/* Header avec gradient */}
+      <LinearGradient
+        colors={['#1E3A8A', '#3B82F6', '#60A5FA']}
+        style={styles.headerGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Animated.View
+          style={[
+            styles.header,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
+          <View style={styles.profileSection}>
+            <View style={styles.avatarContainer}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.avatarGradient}
+              >
+                <Ionicons name="person" size={40} color="#1E3A8A" />
+              </LinearGradient>
+            </View>
+            
+            <View style={styles.userInfo}>
+              <ThemedText style={styles.userName}>
+                {user?.user_metadata?.full_name || 'Utilisateur'}
         </ThemedText>
-            </ThemedView>
-          </ThemedView>
-          <Switch
-            value={notificationsEnabled}
-            onValueChange={setNotificationsEnabled}
-            trackColor={{ false: borderColor, true: primaryColor }}
-            thumbColor="white"
-          />
-        </ThemedView>
-
-        <ThemedView style={[styles.settingItem, { backgroundColor: cardColor, borderColor }]}>
-          <ThemedView style={styles.settingInfo}>
-            <Ionicons name="location-outline" size={24} color={primaryColor} />
-            <ThemedView style={styles.settingText}>
-              <ThemedText style={styles.settingTitle}>Géolocalisation</ThemedText>
-              <ThemedText style={styles.settingDescription}>
-                Partager la localisation pour les notifications
+              <ThemedText style={styles.userEmail}>
+                {user?.email || 'email@example.com'}
         </ThemedText>
-            </ThemedView>
-          </ThemedView>
-          <Switch
-            value={locationEnabled}
-            onValueChange={setLocationEnabled}
-            trackColor={{ false: borderColor, true: primaryColor }}
-            thumbColor="white"
-          />
-        </ThemedView>
+            </View>
+          </View>
+        </Animated.View>
+      </LinearGradient>
 
-        <TouchableOpacity 
-          style={[styles.settingItem, { backgroundColor: cardColor, borderColor }]}
-          onPress={() => Alert.alert('Mode sombre', 'Fonctionnalité à implémenter')}
+      <ScrollView 
+        style={styles.scrollContainer} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Statistiques personnelles */}
+        <Animated.View
+          style={[
+            styles.statsContainer,
+            {
+              opacity: cardAnimations[0],
+              transform: [{
+                translateY: cardAnimations[0].interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [30, 0]
+                })
+              }]
+            }
+          ]}
         >
-          <ThemedView style={styles.settingInfo}>
-            <Ionicons 
-              name={colorScheme === 'dark' ? 'moon-outline' : 'sunny-outline'} 
-              size={24} 
-              color={primaryColor} 
-            />
-            <ThemedView style={styles.settingText}>
-              <ThemedText style={styles.settingTitle}>Mode sombre</ThemedText>
-              <ThemedText style={styles.settingDescription}>
-                {colorScheme === 'dark' ? 'Désactiver' : 'Activer'} le mode sombre
-        </ThemedText>
-            </ThemedView>
-          </ThemedView>
-          <Ionicons name="chevron-forward" size={20} color={primaryColor} />
-        </TouchableOpacity>
-      </ThemedView>
+          <ThemedText style={styles.sectionTitle}>Mes statistiques</ThemedText>
+          
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.statGradient}
+              >
+                <View style={[styles.statIcon, { backgroundColor: primaryColor }]}>
+                  <Ionicons name="car" size={20} color="white" />
+                </View>
+                <ThemedText style={[styles.statNumber, { color: primaryColor }]}>1</ThemedText>
+                <ThemedText style={styles.statLabel}>Véhicule</ThemedText>
+              </LinearGradient>
+            </View>
+            
+            <View style={styles.statCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.statGradient}
+              >
+                <View style={[styles.statIcon, { backgroundColor: secondaryColor }]}>
+                  <Ionicons name="notifications" size={20} color="white" />
+                </View>
+                <ThemedText style={[styles.statNumber, { color: secondaryColor }]}>3</ThemedText>
+                <ThemedText style={styles.statLabel}>Notifications</ThemedText>
+              </LinearGradient>
+            </View>
+            
+            <View style={styles.statCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.statGradient}
+              >
+                <View style={[styles.statIcon, { backgroundColor: successColor }]}>
+                  <Ionicons name="shield-checkmark" size={20} color="white" />
+                </View>
+                <ThemedText style={[styles.statNumber, { color: successColor }]}>100%</ThemedText>
+                <ThemedText style={styles.statLabel}>Sécurisé</ThemedText>
+              </LinearGradient>
+            </View>
+          </View>
+        </Animated.View>
 
-      {/* Actions rapides */}
-      <ThemedView style={styles.actionsContainer}>
-        <ThemedText style={styles.sectionTitle}>Actions rapides</ThemedText>
-        
-        <TouchableOpacity 
-          style={[styles.actionItem, { backgroundColor: cardColor, borderColor }]}
-          onPress={() => router.push('/vehicles')}
+        {/* Actions rapides */}
+        <Animated.View
+          style={[
+            styles.quickActionsContainer,
+            {
+              opacity: cardAnimations[1],
+              transform: [{
+                translateY: cardAnimations[1].interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [30, 0]
+                })
+              }]
+            }
+          ]}
         >
-          <Ionicons name="car-outline" size={24} color={primaryColor} />
-          <ThemedText style={styles.actionText}>Gérer mes véhicules</ThemedText>
-          <Ionicons name="chevron-forward" size={20} color={primaryColor} />
-        </TouchableOpacity>
+          <ThemedText style={styles.sectionTitle}>Actions rapides</ThemedText>
+          
+          <View style={styles.quickActionsGrid}>
+            <TouchableOpacity style={styles.quickActionCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.quickActionGradient}
+              >
+                <View style={[styles.quickActionIcon, { backgroundColor: primaryColor }]}>
+                  <Ionicons name="settings" size={24} color="white" />
+                </View>
+                <ThemedText style={styles.quickActionTitle}>Paramètres</ThemedText>
+                <ThemedText style={styles.quickActionSubtitle}>Personnaliser l&apos;app</ThemedText>
+              </LinearGradient>
+            </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.actionItem, { backgroundColor: cardColor, borderColor }]}
-          onPress={() => router.push('/notifications')}
+            <TouchableOpacity style={styles.quickActionCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.quickActionGradient}
+              >
+                <View style={[styles.quickActionIcon, { backgroundColor: secondaryColor }]}>
+                  <Ionicons name="help-circle" size={24} color="white" />
+                </View>
+                <ThemedText style={styles.quickActionTitle}>Aide</ThemedText>
+                <ThemedText style={styles.quickActionSubtitle}>Support & FAQ</ThemedText>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        {/* Informations légales */}
+        <Animated.View
+          style={[
+            styles.legalContainer,
+            {
+              opacity: cardAnimations[2],
+              transform: [{
+                translateY: cardAnimations[2].interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [30, 0]
+                })
+              }]
+            }
+          ]}
         >
-          <Ionicons name="notifications-outline" size={24} color={primaryColor} />
-          <ThemedText style={styles.actionText}>Voir les notifications</ThemedText>
-          <Ionicons name="chevron-forward" size={20} color={primaryColor} />
-        </TouchableOpacity>
+          <ThemedText style={styles.sectionTitle}>Informations</ThemedText>
+          
+          <View style={styles.legalCard}>
+            <LinearGradient
+              colors={['#FFFFFF', '#F8FAFC']}
+              style={styles.legalGradient}
+            >
+              <TouchableOpacity style={styles.legalItem}>
+                <View style={styles.legalItemContent}>
+                  <Ionicons name="document-text" size={20} color={primaryColor} />
+                  <ThemedText style={styles.legalItemText}>Conditions d&apos;utilisation</ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+              </TouchableOpacity>
+              
+              <View style={styles.separator} />
+              
+              <TouchableOpacity style={styles.legalItem}>
+                <View style={styles.legalItemContent}>
+                  <Ionicons name="shield" size={20} color={primaryColor} />
+                  <ThemedText style={styles.legalItemText}>Politique de confidentialité</ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+              </TouchableOpacity>
+              
+              <View style={styles.separator} />
+              
+              <TouchableOpacity style={styles.legalItem} onPress={handleAbout}>
+                <View style={styles.legalItemContent}>
+                  <Ionicons name="information-circle" size={20} color={primaryColor} />
+                  <ThemedText style={styles.legalItemText}>À propos</ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+        </Animated.View>
 
-        <TouchableOpacity 
-          style={[styles.actionItem, { backgroundColor: cardColor, borderColor }]}
-          onPress={handleContactSupport}
+        {/* Bouton de déconnexion */}
+        <Animated.View
+          style={[
+            styles.logoutContainer,
+            {
+              opacity: cardAnimations[3],
+              transform: [{
+                translateY: cardAnimations[3].interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [30, 0]
+                })
+              }]
+            }
+          ]}
         >
-          <Ionicons name="help-circle-outline" size={24} color={primaryColor} />
-          <ThemedText style={styles.actionText}>Support client</ThemedText>
-          <Ionicons name="chevron-forward" size={20} color={primaryColor} />
-        </TouchableOpacity>
-      </ThemedView>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <LinearGradient
+              colors={[errorColor, '#F87171']}
+              style={styles.logoutGradient}
+            >
+              <Ionicons name="log-out" size={24} color="white" />
+              <ThemedText style={styles.logoutText}>Se déconnecter</ThemedText>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
 
-      {/* Informations légales */}
-      <ThemedView style={styles.legalContainer}>
-        <ThemedText style={styles.sectionTitle}>Informations légales</ThemedText>
-        
-        <TouchableOpacity 
-          style={[styles.legalItem, { backgroundColor: cardColor, borderColor }]}
-          onPress={handlePrivacyPolicy}
+        {/* Version de l'app */}
+        <Animated.View
+          style={[
+            styles.versionContainer,
+            {
+              opacity: cardAnimations[4],
+              transform: [{
+                translateY: cardAnimations[4].interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [30, 0]
+                })
+              }]
+            }
+          ]}
         >
-          <ThemedText style={styles.legalText}>Politique de confidentialité</ThemedText>
-          <Ionicons name="chevron-forward" size={20} color={primaryColor} />
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.legalItem, { backgroundColor: cardColor, borderColor }]}
-          onPress={handleTermsOfService}
-        >
-          <ThemedText style={styles.legalText}>Conditions d'utilisation</ThemedText>
-          <Ionicons name="chevron-forward" size={20} color={primaryColor} />
-        </TouchableOpacity>
-      </ThemedView>
-
-      {/* Déconnexion */}
-      <ThemedView style={styles.logoutContainer}>
-        <TouchableOpacity 
-          style={[styles.logoutButton, { backgroundColor: '#EF4444' }]}
-          onPress={handleLogout}
-        >
-          <Ionicons name="log-out-outline" size={24} color="white" />
-          <ThemedText style={styles.logoutText}>Se déconnecter</ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
-
-      {/* Version */}
-      <ThemedView style={styles.versionContainer}>
-        <ThemedText style={styles.versionText}>Notifcar v1.0.0</ThemedText>
-        <ThemedText style={styles.versionSubtext}>&quot;Votre véhicule vous parle, écoutez-le&quot;</ThemedText>
-      </ThemedView>
-    </ScrollView>
+          <ThemedText style={styles.versionText}>Notifcar v1.0.0</ThemedText>
+          <ThemedText style={styles.copyrightText}>
+            © 2024 Notifcar. Tous droits réservés.
+          </ThemedText>
+        </Animated.View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F8FAFC',
   },
-  header: {
+  headerGradient: {
     paddingTop: 50,
     paddingBottom: 30,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
-  profileInfo: {
-    flexDirection: 'row',
+  header: {
+    // Animation handled by Animated.View
+  },
+  profileSection: {
     alignItems: 'center',
-    gap: 16,
   },
-  avatar: {
+  avatarContainer: {
+    marginBottom: 20,
+  },
+  avatarGradient: {
     width: 80,
     height: 80,
-    borderRadius: 40,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
   userInfo: {
-    flex: 1,
+    alignItems: 'center',
   },
   userName: {
+    fontSize: 24,
+    fontWeight: '700',
     color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
     marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   userEmail: {
-    color: 'white',
-    fontSize: 14,
-    opacity: 0.8,
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   statsContainer: {
+    padding: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 20,
+    color: '#1F2937',
+    letterSpacing: -0.3,
+  },
+  statsRow: {
     flexDirection: 'row',
-    padding: 20,
-    gap: 12,
+    gap: 16,
   },
   statCard: {
     flex: 1,
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  statGradient: {
+    padding: 20,
+    borderRadius: 20,
     borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   statNumber: {
     fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 8,
+    fontWeight: '700',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    opacity: 0.7,
-  },
-  settingsContainer: {
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  settingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 12,
-  },
-  settingText: {
-    flex: 1,
-  },
-  settingTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  settingDescription: {
-    fontSize: 12,
-    opacity: 0.7,
-  },
-  actionsContainer: {
-    padding: 20,
-  },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
-    gap: 12,
-  },
-  actionText: {
-    flex: 1,
-    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
     fontWeight: '500',
   },
-  legalContainer: {
+  quickActionsContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  quickActionCard: {
+    flex: 1,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  quickActionGradient: {
     padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  quickActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  quickActionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+    color: '#1F2937',
+    textAlign: 'center',
+  },
+  quickActionSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  legalContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  legalCard: {
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  legalGradient: {
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   legalItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
+    paddingVertical: 16,
   },
-  legalText: {
+  legalItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  legalItemText: {
     fontSize: 16,
     fontWeight: '500',
+    color: '#1F2937',
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 8,
   },
   logoutContainer: {
-    padding: 20,
+    paddingHorizontal: 24,
+    marginBottom: 32,
   },
   logoutButton: {
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  logoutGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
-    borderRadius: 12,
-    gap: 8,
+    borderRadius: 16,
+    gap: 12,
   },
   logoutText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   versionContainer: {
     alignItems: 'center',
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 24,
   },
   versionText: {
     fontSize: 14,
     fontWeight: '600',
+    color: '#6B7280',
     marginBottom: 4,
   },
-  versionSubtext: {
+  copyrightText: {
     fontSize: 12,
-    opacity: 0.7,
-    fontStyle: 'italic',
+    color: '#9CA3AF',
+    textAlign: 'center',
   },
 });

@@ -1,9 +1,9 @@
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View, Animated, StatusBar } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface Notification {
   id: string;
@@ -11,9 +11,9 @@ interface Notification {
   title: string;
   message: string;
   vehicle: string;
+  location?: string;
   timestamp: Date;
   isRead: boolean;
-  location?: string;
 }
 
 export default function NotificationsScreen() {
@@ -21,66 +21,92 @@ export default function NotificationsScreen() {
     // Données de démonstration
     {
       id: '1',
-      type: 'warning',
-      title: 'Véhicule mal garé',
-      message: 'Votre véhicule gêne la circulation. Veuillez le déplacer.',
+      type: 'urgent',
+      title: 'Incident détecté',
+      message: 'Votre véhicule a été heurté par un autre véhicule',
       vehicle: 'Renault Clio - AB-123-CD',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2h ago
-      isRead: false,
       location: 'Rue de la Paix, Paris',
+      timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+      isRead: false,
     },
     {
       id: '2',
-      type: 'info',
-      title: 'Feu de position allumé',
-      message: 'Les feux de position de votre véhicule sont restés allumés.',
+      type: 'warning',
+      title: 'Stationnement irrégulier',
+      message: 'Votre véhicule gêne la circulation',
       vehicle: 'Renault Clio - AB-123-CD',
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-      isRead: true,
+      location: 'Boulevard Saint-Germain, Paris',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+      isRead: false,
     },
     {
       id: '3',
-      type: 'urgent',
-      title: 'Accident mineur',
-      message: 'Votre véhicule a été touché par un autre véhicule. Aucun dégât visible.',
+      type: 'info',
+      title: 'Notification de test',
+      message: 'Ceci est une notification de test pour vérifier le système',
       vehicle: 'Renault Clio - AB-123-CD',
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
       isRead: true,
-      location: 'Parking Centre Commercial',
     },
   ]);
 
   const primaryColor = useThemeColor({}, 'primary');
   const secondaryColor = useThemeColor({}, 'secondary');
-  const cardColor = useThemeColor({}, 'card');
-  const borderColor = useThemeColor({}, 'border');
   const warningColor = useThemeColor({}, 'warning');
   const errorColor = useThemeColor({}, 'error');
   const successColor = useThemeColor({}, 'success');
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'urgent':
-        return 'alert-circle';
-      case 'warning':
-        return 'warning';
-      case 'info':
-        return 'information-circle';
-      default:
-        return 'notifications';
-    }
-  };
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const cardAnimations = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
+
+  useEffect(() => {
+    // Animation d'entrée
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Animations en cascade pour les cartes
+    cardAnimations.forEach((anim, index) => {
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 600,
+        delay: 200 + (index * 100),
+        useNativeDriver: true,
+      }).start();
+    });
+  }, []);
 
   const getNotificationColor = (type: string) => {
     switch (type) {
-      case 'urgent':
-        return errorColor;
-      case 'warning':
-        return warningColor;
-      case 'info':
-        return primaryColor;
-      default:
-        return primaryColor;
+      case 'urgent': return errorColor;
+      case 'warning': return warningColor;
+      case 'info': return primaryColor;
+      default: return primaryColor;
+    }
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'urgent': return 'alert-circle';
+      case 'warning': return 'warning';
+      case 'info': return 'information-circle';
+      default: return 'notifications';
     }
   };
 
@@ -101,7 +127,7 @@ export default function NotificationsScreen() {
   };
 
   const handleMarkAsRead = (id: string) => {
-    setNotifications(notifications.map(notification =>
+    setNotifications(notifications.map(notification => 
       notification.id === id ? { ...notification, isRead: true } : notification
     ));
   };
@@ -130,243 +156,451 @@ export default function NotificationsScreen() {
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <ThemedView style={[styles.header, { backgroundColor: primaryColor }]}>
-        <ThemedView style={styles.headerContent}>
-          <ThemedText style={styles.headerTitle}>Notifications</ThemedText>
-          {unreadCount > 0 && (
-            <ThemedView style={[styles.badge, { backgroundColor: secondaryColor }]}>
-              <ThemedText style={styles.badgeText}>{unreadCount}</ThemedText>
-            </ThemedView>
-          )}
-        </ThemedView>
-        {unreadCount > 0 && (
-          <TouchableOpacity
-            style={styles.markAllButton}
-            onPress={handleMarkAllAsRead}
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
+      
+      {/* Header avec gradient */}
+      <LinearGradient
+        colors={['#1E3A8A', '#3B82F6', '#60A5FA']}
+        style={styles.headerGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Animated.View
+          style={[
+            styles.header,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
+          <View style={styles.headerContent}>
+            <View style={styles.headerTextContainer}>
+              <ThemedText style={styles.headerTitle}>Notifications</ThemedText>
+              {unreadCount > 0 && (
+                <View style={styles.badgeContainer}>
+                  <LinearGradient
+                    colors={[secondaryColor, '#FB923C']}
+                    style={styles.badge}
+                  >
+                    <ThemedText style={styles.badgeText}>{unreadCount}</ThemedText>
+                  </LinearGradient>
+                </View>
+              )}
+            </View>
+            
+            {unreadCount > 0 && (
+              <TouchableOpacity
+                style={styles.markAllButton}
+                onPress={handleMarkAllAsRead}
+              >
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+                  style={styles.markAllButtonGradient}
+                >
+                  <Ionicons name="checkmark-done" size={16} color="white" />
+                  <ThemedText style={styles.markAllText}>Tout marquer</ThemedText>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+          </View>
+        </Animated.View>
+      </LinearGradient>
+
+      <ScrollView 
+        style={styles.scrollContainer} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Statistiques avec design sophistiqué */}
+        <View style={styles.statsContainer}>
+          <Animated.View
+            style={[
+              styles.statsRow,
+              {
+                opacity: cardAnimations[0],
+                transform: [{
+                  translateY: cardAnimations[0].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [30, 0]
+                  })
+                }]
+              }
+            ]}
           >
-            <ThemedText style={styles.markAllText}>Tout marquer</ThemedText>
-          </TouchableOpacity>
-        )}
-      </ThemedView>
+            <View style={styles.statCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.statGradient}
+              >
+                <View style={[styles.statIcon, { backgroundColor: primaryColor }]}>
+                  <Ionicons name="notifications" size={20} color="white" />
+                </View>
+                <ThemedText style={[styles.statNumber, { color: primaryColor }]}>
+                  {notifications.length}
+                </ThemedText>
+                <ThemedText style={styles.statLabel}>Total</ThemedText>
+              </LinearGradient>
+            </View>
+            
+            <View style={styles.statCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.statGradient}
+              >
+                <View style={[styles.statIcon, { backgroundColor: warningColor }]}>
+                  <Ionicons name="mail-unread" size={20} color="white" />
+                </View>
+                <ThemedText style={[styles.statNumber, { color: warningColor }]}>
+                  {unreadCount}
+                </ThemedText>
+                <ThemedText style={styles.statLabel}>Non lues</ThemedText>
+              </LinearGradient>
+            </View>
+            
+            <View style={styles.statCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.statGradient}
+              >
+                <View style={[styles.statIcon, { backgroundColor: errorColor }]}>
+                  <Ionicons name="alert-circle" size={20} color="white" />
+                </View>
+                <ThemedText style={[styles.statNumber, { color: errorColor }]}>
+                  {notifications.filter(n => n.type === 'urgent').length}
+                </ThemedText>
+                <ThemedText style={styles.statLabel}>Urgentes</ThemedText>
+              </LinearGradient>
+            </View>
+          </Animated.View>
+        </View>
 
-      {/* Statistiques rapides */}
-      <ThemedView style={styles.statsContainer}>
-        <ThemedView style={[styles.statCard, { backgroundColor: cardColor, borderColor }]}>
-          <Ionicons name="notifications-outline" size={24} color={primaryColor} />
-          <ThemedText style={styles.statNumber}>{notifications.length}</ThemedText>
-          <ThemedText style={styles.statLabel}>Total</ThemedText>
-        </ThemedView>
-        
-        <ThemedView style={[styles.statCard, { backgroundColor: cardColor, borderColor }]}>
-          <Ionicons name="mail-unread-outline" size={24} color={warningColor} />
-          <ThemedText style={styles.statNumber}>{unreadCount}</ThemedText>
-          <ThemedText style={styles.statLabel}>Non lues</ThemedText>
-        </ThemedView>
-        
-        <ThemedView style={[styles.statCard, { backgroundColor: cardColor, borderColor }]}>
-          <Ionicons name="alert-circle-outline" size={24} color={errorColor} />
-          <ThemedText style={styles.statNumber}>
-            {notifications.filter(n => n.type === 'urgent').length}
-          </ThemedText>
-          <ThemedText style={styles.statLabel}>Urgentes</ThemedText>
-        </ThemedView>
-      </ThemedView>
-
-      {/* Liste des notifications */}
-      <ThemedView style={styles.notificationsList}>
-        {notifications.length === 0 ? (
-          <ThemedView style={styles.emptyState}>
-            <Ionicons name="notifications-off-outline" size={64} color={primaryColor} />
-            <ThemedText style={styles.emptyTitle}>Aucune notification</ThemedText>
-            <ThemedText style={styles.emptyText}>
-              Vous recevrez des notifications lorsque quelqu'un scannera votre QR code
-            </ThemedText>
-          </ThemedView>
-        ) : (
-          notifications.map((notification) => (
-            <ThemedView
-              key={notification.id}
+        {/* Liste des notifications avec design premium */}
+        <View style={styles.notificationsList}>
+          {notifications.length === 0 ? (
+            <Animated.View
               style={[
-                styles.notificationCard,
-                { 
-                  backgroundColor: cardColor, 
-                  borderColor,
-                  borderLeftColor: getNotificationColor(notification.type),
-                  borderLeftWidth: 4,
+                styles.emptyState,
+                {
+                  opacity: cardAnimations[1],
+                  transform: [{
+                    translateY: cardAnimations[1].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [30, 0]
+                    })
+                  }]
                 }
               ]}
             >
-              <ThemedView style={styles.notificationHeader}>
-                <ThemedView style={styles.notificationIcon}>
-                  <Ionicons
-                    name={getNotificationIcon(notification.type)}
-                    size={24}
-                    color={getNotificationColor(notification.type)}
-                  />
-                </ThemedView>
-                
-                <ThemedView style={styles.notificationContent}>
-                  <ThemedView style={styles.notificationTitleRow}>
-                    <ThemedText style={[
-                      styles.notificationTitle,
-                      !notification.isRead && styles.unreadTitle
-                    ]}>
-                      {notification.title}
-                    </ThemedText>
-                    {!notification.isRead && (
-                      <ThemedView style={[styles.unreadDot, { backgroundColor: primaryColor }]} />
-                    )}
-                  </ThemedView>
-                  
-                  <ThemedText style={styles.notificationMessage}>
-                    {notification.message}
-                  </ThemedText>
-                  
-                  <ThemedText style={styles.vehicleInfo}>
-                    {notification.vehicle}
-                  </ThemedText>
-                  
-                  {notification.location && (
-                    <ThemedView style={styles.locationRow}>
-                      <Ionicons name="location-outline" size={16} color={primaryColor} />
-                      <ThemedText style={styles.locationText}>
-                        {notification.location}
-                      </ThemedText>
-                    </ThemedView>
-                  )}
-                  
-                  <ThemedText style={styles.timestamp}>
-                    {formatTimestamp(notification.timestamp)}
-                  </ThemedText>
-                </ThemedView>
-              </ThemedView>
-
-              <ThemedView style={styles.notificationActions}>
-                {!notification.isRead && (
-                  <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: primaryColor }]}
-                    onPress={() => handleMarkAsRead(notification.id)}
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.emptyStateGradient}
+              >
+                <View style={[styles.emptyIcon, { backgroundColor: primaryColor }]}>
+                  <Ionicons name="notifications-off" size={40} color="white" />
+                </View>
+                <ThemedText style={styles.emptyTitle}>Aucune notification</ThemedText>
+                <ThemedText style={styles.emptyText}>
+                  Vous recevrez des notifications lorsque quelqu&apos;un scannera votre QR code
+                </ThemedText>
+              </LinearGradient>
+            </Animated.View>
+          ) : (
+            notifications.map((notification, index) => (
+              <Animated.View
+                key={notification.id}
+                style={[
+                  styles.notificationCardWrapper,
+                  {
+                    opacity: cardAnimations[(index % 3) + 1],
+                    transform: [{
+                      translateY: cardAnimations[(index % 3) + 1].interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [30, 0]
+                      })
+                    }]
+                  }
+                ]}
+              >
+                <View style={[
+                  styles.notificationCard,
+                  { 
+                    borderLeftColor: getNotificationColor(notification.type),
+                    borderLeftWidth: 4,
+                  }
+                ]}>
+                  <LinearGradient
+                    colors={['#FFFFFF', '#F8FAFC']}
+                    style={styles.notificationGradient}
                   >
-                    <Ionicons name="checkmark" size={16} color="white" />
-                    <ThemedText style={styles.actionButtonText}>Marquer lu</ThemedText>
-                  </TouchableOpacity>
-                )}
-                
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: errorColor }]}
-                  onPress={() => handleDeleteNotification(notification.id)}
-                >
-                  <Ionicons name="trash-outline" size={16} color="white" />
-                </TouchableOpacity>
-              </ThemedView>
-            </ThemedView>
-          ))
-        )}
-      </ThemedView>
-    </ScrollView>
+                    <View style={styles.notificationHeader}>
+                      <View style={[
+                        styles.notificationIcon, 
+                        { backgroundColor: getNotificationColor(notification.type) }
+                      ]}>
+                        <Ionicons
+                          name={getNotificationIcon(notification.type)}
+                          size={20}
+                          color="white"
+                        />
+                      </View>
+                      
+                      <View style={styles.notificationContent}>
+                        <View style={styles.notificationTitleRow}>
+                          <ThemedText style={[
+                            styles.notificationTitle,
+                            !notification.isRead && styles.unreadTitle
+                          ]}>
+                            {notification.title}
+                          </ThemedText>
+                          {!notification.isRead && (
+                            <View style={[styles.unreadDot, { backgroundColor: primaryColor }]} />
+                          )}
+                        </View>
+                        
+                        <ThemedText style={styles.notificationMessage}>
+                          {notification.message}
+                        </ThemedText>
+                        
+                        <View style={styles.vehicleInfoContainer}>
+                          <Ionicons name="car" size={16} color={primaryColor} />
+                          <ThemedText style={styles.vehicleInfo}>
+                            {notification.vehicle}
+                          </ThemedText>
+                        </View>
+                        
+                        {notification.location && (
+                          <View style={styles.locationRow}>
+                            <Ionicons name="location" size={16} color="#6B7280" />
+                            <ThemedText style={styles.locationText}>
+                              {notification.location}
+                            </ThemedText>
+                          </View>
+                        )}
+                        
+                        <View style={styles.timestampContainer}>
+                          <Ionicons name="time" size={14} color="#9CA3AF" />
+                          <ThemedText style={styles.timestamp}>
+                            {formatTimestamp(notification.timestamp)}
+                          </ThemedText>
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={styles.notificationActions}>
+                      {!notification.isRead && (
+                        <TouchableOpacity
+                          style={[styles.actionButton, { backgroundColor: primaryColor }]}
+                          onPress={() => handleMarkAsRead(notification.id)}
+                        >
+                          <LinearGradient
+                            colors={[primaryColor, '#3B82F6']}
+                            style={styles.actionButtonGradient}
+                          >
+                            <Ionicons name="checkmark" size={16} color="white" />
+                            <ThemedText style={styles.actionButtonText}>Marquer lu</ThemedText>
+                          </LinearGradient>
+                        </TouchableOpacity>
+                      )}
+                      
+                      <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: errorColor }]}
+                        onPress={() => handleDeleteNotification(notification.id)}
+                      >
+                        <LinearGradient
+                          colors={[errorColor, '#F87171']}
+                          style={styles.actionButtonGradient}
+                        >
+                          <Ionicons name="trash" size={16} color="white" />
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
+                  </LinearGradient>
+                </View>
+              </Animated.View>
+            ))
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  headerGradient: {
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 24,
   },
   header: {
+    // Animation handled by Animated.View
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
   },
-  headerContent: {
+  headerTextContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
   headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
     color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  badgeContainer: {
+    // Container for badge
   },
   badge: {
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 24,
+    alignItems: 'center',
   },
   badgeText: {
     color: 'white',
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   markAllButton: {
+    borderRadius: 12,
+  },
+  markAllButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
+    borderRadius: 12,
+    gap: 6,
   },
   markAllText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
   },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
   statsContainer: {
+    padding: 24,
+  },
+  statsRow: {
     flexDirection: 'row',
-    padding: 20,
-    gap: 12,
+    gap: 16,
   },
   statCard: {
     flex: 1,
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  statGradient: {
+    padding: 20,
+    borderRadius: 20,
     borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   statNumber: {
     fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 8,
+    fontWeight: '700',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    opacity: 0.7,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontWeight: '500',
   },
   notificationsList: {
-    padding: 20,
+    padding: 24,
   },
   emptyState: {
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  emptyStateGradient: {
     alignItems: 'center',
     padding: 40,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 12,
+    color: '#1F2937',
   },
   emptyText: {
     textAlign: 'center',
-    opacity: 0.7,
-    lineHeight: 20,
+    color: '#6B7280',
+    lineHeight: 22,
+    fontSize: 16,
+  },
+  notificationCardWrapper: {
+    marginBottom: 20,
   },
   notificationCard: {
-    padding: 16,
-    borderRadius: 12,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  notificationGradient: {
+    padding: 24,
+    borderRadius: 24,
     borderWidth: 1,
-    marginBottom: 12,
+    borderColor: '#E5E7EB',
   },
   notificationHeader: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 16,
+    marginBottom: 20,
   },
   notificationIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -377,59 +611,79 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   notificationTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     flex: 1,
+    color: '#1F2937',
   },
   unreadTitle: {
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
+    marginLeft: 8,
   },
   notificationMessage: {
-    fontSize: 14,
+    fontSize: 15,
+    marginBottom: 12,
+    lineHeight: 22,
+    color: '#1F2937',
+  },
+  vehicleInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 8,
-    lineHeight: 20,
   },
   vehicleInfo: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 4,
-    opacity: 0.7,
+    color: '#1F2937',
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 8,
     marginBottom: 8,
   },
   locationText: {
-    fontSize: 12,
-    opacity: 0.7,
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  timestampContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   timestamp: {
     fontSize: 12,
-    opacity: 0.5,
+    color: '#9CA3AF',
   },
   notificationActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 8,
-    marginTop: 12,
+    gap: 12,
   },
   actionButton: {
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  actionButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    gap: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 6,
   },
   actionButtonText: {
     color: 'white',

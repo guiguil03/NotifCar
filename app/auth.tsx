@@ -1,37 +1,62 @@
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
-import {
-    Alert,
-    Dimensions,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-} from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
-const { width } = Dimensions.get('window');
+// const { width, height } = Dimensions.get('window');
 
 export default function AuthScreen() {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { signIn, signUp, resetPassword, session, user } = useAuth();
-
+  const { signIn, signUp } = useAuth();
   const primaryColor = useThemeColor({}, 'primary');
-  const secondaryColor = useThemeColor({}, 'secondary');
-  const cardColor = useThemeColor({}, 'card');
-  const borderColor = useThemeColor({}, 'border');
-  const textColor = useThemeColor({}, 'text');
+  // const secondaryColor = useThemeColor({}, 'secondary');
+  // const errorColor = useThemeColor({}, 'error');
+
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const logoScaleAnim = useRef(new Animated.Value(0.8)).current;
+  const formSlideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    // Animation d'entrée
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoScaleAnim, {
+        toValue: 1,
+        duration: 800,
+        delay: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(formSlideAnim, {
+        toValue: 0,
+        duration: 800,
+        delay: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim, logoScaleAnim, formSlideAnim]);
 
   const handleAuth = async () => {
     if (!email || !password) {
@@ -39,174 +64,276 @@ export default function AuthScreen() {
       return;
     }
 
-    if (!isLogin && !fullName) {
-      Alert.alert('Erreur', 'Veuillez entrer votre nom complet');
+    if (!isLogin && (!fullName || password !== confirmPassword)) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs et vérifier que les mots de passe correspondent');
       return;
     }
 
     setLoading(true);
 
     try {
-      const { error } = isLogin
-        ? await signIn(email, password)
-        : await signUp(email, password, fullName);
-
-      if (error) {
-        Alert.alert('Erreur', error.message);
-      } else if (isLogin) {
-        // Connexion réussie, rediriger vers l'accueil
+      if (isLogin) {
+        await signIn(email, password);
         router.replace('/(tabs)');
       } else {
-        // Inscription réussie
-        Alert.alert(
-          'Succès',
-          'Compte créé ! Vérifiez votre email pour confirmer votre inscription.'
-        );
+        await signUp(email, password, fullName);
+        // Redirection vers l'onboarding après inscription
+        router.replace('/onboarding');
       }
-    } catch (error) {
-      Alert.alert('Erreur', 'Une erreur inattendue s\'est produite');
+    } catch (error: any) {
+      Alert.alert('Erreur', error.message || 'Une erreur est survenue');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!email) {
-      Alert.alert('Erreur', 'Veuillez entrer votre email d\'abord');
-      return;
-    }
-
-    const { error } = await resetPassword(email);
-    if (error) {
-      Alert.alert('Erreur', error.message);
-    } else {
-      Alert.alert(
-        'Email envoyé',
-        'Un lien de réinitialisation a été envoyé à votre adresse email.'
-      );
-    }
+  const toggleAuthMode = () => {
+    setIsLogin(!isLogin);
+    setPassword('');
+    setConfirmPassword('');
+    setFullName('');
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
+      
+      {/* Background avec gradient */}
+      <LinearGradient
+        colors={['#1E3A8A', '#3B82F6', '#60A5FA']}
+        style={styles.backgroundGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Header avec logo */}
-        <ThemedView style={[styles.header, { backgroundColor: primaryColor }]}>
-          <ThemedView style={[styles.logoContainer, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-            <Ionicons name="car-sport" size={60} color="white" />
-          </ThemedView>
-          <ThemedText style={styles.logo}>Notifcar</ThemedText>
-          <ThemedText style={styles.slogan}>Votre véhicule vous parle, écoutez-le</ThemedText>
-        </ThemedView>
-
-        {/* Formulaire d'authentification */}
-        <ThemedView style={styles.formContainer}>
-          <ThemedView style={[styles.formCard, { backgroundColor: cardColor, borderColor }]}>
-            <ThemedText style={styles.formTitle}>
-              {isLogin ? 'Connexion' : 'Créer un compte'}
-            </ThemedText>
-
-            {!isLogin && (
-              <ThemedView style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={20} color={primaryColor} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { borderColor, color: textColor }]}
-                  placeholder="Nom complet"
-                  placeholderTextColor={textColor + '80'}
-                  value={fullName}
-                  onChangeText={setFullName}
-                  autoCapitalize="words"
-                />
-              </ThemedView>
-            )}
-
-            <ThemedView style={styles.inputContainer}>
-              <Ionicons name="mail-outline" size={20} color={primaryColor} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, { borderColor, color: textColor }]}
-                placeholder="Email"
-                placeholderTextColor={textColor + '80'}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </ThemedView>
-
-            <ThemedView style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color={primaryColor} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, { borderColor, color: textColor }]}
-                placeholder="Mot de passe"
-                placeholderTextColor={textColor + '80'}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-              />
-            </ThemedView>
-
-            <TouchableOpacity
-              style={[styles.authButton, { backgroundColor: primaryColor }]}
-              onPress={handleAuth}
-              disabled={loading}
-            >
-              <ThemedText style={styles.authButtonText}>
-                {loading ? 'Chargement...' : (isLogin ? 'Se connecter' : 'Créer le compte')}
-              </ThemedText>
-            </TouchableOpacity>
-
-            {isLogin && (
-              <TouchableOpacity
-                style={styles.forgotPasswordButton}
-                onPress={handleForgotPassword}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Logo et titre */}
+          <Animated.View
+            style={[
+              styles.logoSection,
+              {
+                opacity: fadeAnim,
+                transform: [
+                  { translateY: slideAnim },
+                  { scale: logoScaleAnim }
+                ]
+              }
+            ]}
+          >
+            <View style={styles.logoContainer}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.logoGradient}
               >
-                <ThemedText style={[styles.forgotPasswordText, { color: primaryColor }]}>
-                  Mot de passe oublié ?
-                </ThemedText>
-              </TouchableOpacity>
-            )}
+                <Ionicons name="car-sport" size={48} color="#1E3A8A" />
+              </LinearGradient>
+            </View>
+            
+            <ThemedText style={styles.appTitle}>Notifcar</ThemedText>
+            <ThemedText style={styles.appSubtitle}>
+              Votre sécurité automobile en un clic
+            </ThemedText>
+          </Animated.View>
 
-            <ThemedView style={styles.switchContainer}>
-              <ThemedText style={styles.switchText}>
-                {isLogin ? 'Pas encore de compte ?' : 'Déjà un compte ?'}
-              </ThemedText>
-              <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
-                <ThemedText style={[styles.switchButton, { color: primaryColor }]}>
-                  {isLogin ? 'Créer un compte' : 'Se connecter'}
-                </ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
-          </ThemedView>
-        </ThemedView>
+          {/* Formulaire d'authentification */}
+          <Animated.View
+            style={[
+              styles.formContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: formSlideAnim }]
+              }
+            ]}
+          >
+            <View style={styles.formCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.formGradient}
+              >
+                <View style={styles.formHeader}>
+                  <ThemedText style={styles.formTitle}>
+                    {isLogin ? 'Connexion' : 'Inscription'}
+                  </ThemedText>
+                  <ThemedText style={styles.formSubtitle}>
+                    {isLogin 
+                      ? 'Connectez-vous à votre compte' 
+                      : 'Créez votre compte Notifcar'
+                    }
+                  </ThemedText>
+                </View>
 
-        {/* Footer avec informations */}
-        <ThemedView style={styles.footer}>
-          <ThemedText style={styles.footerText}>
-            En vous connectant, vous acceptez nos conditions d&apos;utilisation
-          </ThemedText>
-          <ThemedText style={styles.footerSubtext}>
-            Notifcar v1.0.0 - Sécurisé par Supabase
-          </ThemedText>
-          
-          {/* Debug info - à supprimer en production */}
-          {__DEV__ && (
-            <ThemedView style={styles.debugContainer}>
-              <ThemedText style={styles.debugText}>
-                Debug: {session ? `Connecté (${user?.email})` : 'Non connecté'}
-              </ThemedText>
-            </ThemedView>
-          )}
-        </ThemedView>
-      </ScrollView>
-    </KeyboardAvoidingView>
+                <View style={styles.inputContainer}>
+                  {/* Nom complet (inscription seulement) */}
+                  {!isLogin && (
+                    <View style={styles.inputWrapper}>
+                      <View style={styles.inputIcon}>
+                        <Ionicons name="person" size={20} color={primaryColor} />
+                      </View>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Nom complet"
+                        placeholderTextColor="#9CA3AF"
+                        value={fullName}
+                        onChangeText={setFullName}
+                        autoCapitalize="words"
+                        autoCorrect={false}
+                      />
+                    </View>
+                  )}
+
+                  {/* Email */}
+                  <View style={styles.inputWrapper}>
+                    <View style={styles.inputIcon}>
+                      <Ionicons name="mail" size={20} color={primaryColor} />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Adresse email"
+                      placeholderTextColor="#9CA3AF"
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+
+                  {/* Mot de passe */}
+                  <View style={styles.inputWrapper}>
+                    <View style={styles.inputIcon}>
+                      <Ionicons name="lock-closed" size={20} color={primaryColor} />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Mot de passe"
+                      placeholderTextColor="#9CA3AF"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                    />
+                    <TouchableOpacity
+                      style={styles.passwordToggle}
+                      onPress={() => setShowPassword(!showPassword)}
+                    >
+                      <Ionicons
+                        name={showPassword ? "eye-off" : "eye"}
+                        size={20}
+                        color="#9CA3AF"
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Confirmation mot de passe (inscription seulement) */}
+                  {!isLogin && (
+                    <View style={styles.inputWrapper}>
+                      <View style={styles.inputIcon}>
+                        <Ionicons name="lock-closed" size={20} color={primaryColor} />
+                      </View>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Confirmer le mot de passe"
+                        placeholderTextColor="#9CA3AF"
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        secureTextEntry={!showConfirmPassword}
+                        autoCapitalize="none"
+                      />
+                      <TouchableOpacity
+                        style={styles.passwordToggle}
+                        onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        <Ionicons
+                          name={showConfirmPassword ? "eye-off" : "eye"}
+                          size={20}
+                          color="#9CA3AF"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+
+                {/* Bouton d'authentification */}
+                <TouchableOpacity
+                  style={styles.authButton}
+                  onPress={handleAuth}
+                  disabled={loading}
+                >
+                  <LinearGradient
+                    colors={[primaryColor, '#3B82F6']}
+                    style={styles.authButtonGradient}
+                  >
+                    {loading ? (
+                      <Animated.View style={styles.loadingContainer}>
+                        <Ionicons name="refresh" size={20} color="white" />
+                        <ThemedText style={styles.authButtonText}>
+                          {isLogin ? 'Connexion...' : 'Création...'}
+                        </ThemedText>
+                      </Animated.View>
+                    ) : (
+                      <>
+                        <Ionicons 
+                          name={isLogin ? "log-in" : "person-add"} 
+                          size={20} 
+                          color="white" 
+                        />
+                        <ThemedText style={styles.authButtonText}>
+                          {isLogin ? 'Se connecter' : 'Créer un compte'}
+                        </ThemedText>
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+
+                {/* Lien pour changer de mode */}
+                <TouchableOpacity
+                  style={styles.toggleButton}
+                  onPress={toggleAuthMode}
+                >
+                  <ThemedText style={styles.toggleButtonText}>
+                    {isLogin 
+                      ? 'Pas encore de compte ? Créer un compte' 
+                      : 'Déjà un compte ? Se connecter'
+                    }
+                  </ThemedText>
+                </TouchableOpacity>
+              </LinearGradient>
+            </View>
+          </Animated.View>
+
+          {/* Informations supplémentaires */}
+          <Animated.View
+            style={[
+              styles.infoSection,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }]
+              }
+            ]}
+          >
+            <View style={styles.infoCard}>
+              <LinearGradient
+                colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
+                style={styles.infoGradient}
+              >
+                <Ionicons name="shield-checkmark" size={24} color="white" />
+                <ThemedText style={styles.infoText}>
+                  Vos données sont sécurisées et protégées
+                </ThemedText>
+              </LinearGradient>
+            </View>
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -214,141 +341,182 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollContainer: {
-    flexGrow: 1,
+  backgroundGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  header: {
-    paddingTop: 60,
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 80,
     paddingBottom: 40,
-    paddingHorizontal: 20,
+  },
+  logoSection: {
     alignItems: 'center',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    marginBottom: 48,
   },
   logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    marginBottom: 29,
+    marginTop: 0,
+  },
+  logoGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  logo: {
-    fontSize: 36,
-    fontWeight: 'bold',
+  appTitle: {
+    fontSize: 32,
+    fontWeight: '700',
     color: 'white',
-    marginBottom: 8,
+    zIndex: -1,
+    marginBottom: 0,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
-  slogan: {
+  appSubtitle: {
     fontSize: 16,
-    color: 'white',
+    color: 'rgba(255,255,255,0.9)',
     textAlign: 'center',
-    opacity: 0.9,
-    lineHeight: 22,
+    fontWeight: '500',
   },
   formContainer: {
-    flex: 1,
-    padding: 20,
-    marginTop: -20,
-  },
-  formCard: {
-    padding: 30,
-    borderRadius: 20,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  formTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
     marginBottom: 30,
   },
-  inputContainer: {
-    flexDirection: 'row',
+  formCard: {
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  formGradient: {
+    padding: 32,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  formHeader: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 32,
+  },
+  formTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  formSubtitle: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  inputContainer: {
+    gap: 20,
+    marginBottom: 32,
+  },
+  inputWrapper: {
     position: 'relative',
   },
   inputIcon: {
     position: 'absolute',
-    left: 15,
+    left: 16,
+    top: 16,
     zIndex: 1,
   },
   input: {
-    flex: 1,
     borderWidth: 1,
-    borderRadius: 12,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
     padding: 16,
-    paddingLeft: 50,
+    paddingLeft: 52,
+    paddingRight: 52,
     fontSize: 16,
-    backgroundColor: 'transparent',
-  },
-  authButton: {
-    padding: 18,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    color: '#1F2937',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 16,
+    top: 16,
+    zIndex: 1,
+  },
+  authButton: {
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+    marginBottom: 24,
+  },
+  authButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 18,
+    borderRadius: 16,
+    gap: 12,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   authButtonText: {
     color: 'white',
     fontSize: 18,
-    fontWeight: 'bold',
-  },
-  forgotPasswordButton: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  forgotPasswordText: {
-    fontSize: 14,
     fontWeight: '600',
   },
-  switchContainer: {
+  toggleButton: {
     alignItems: 'center',
-    gap: 8,
   },
-  switchText: {
-    fontSize: 14,
-    opacity: 0.7,
+  toggleButtonText: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
   },
-  switchButton: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  footer: {
+  infoSection: {
     alignItems: 'center',
-    padding: 20,
-    paddingBottom: 40,
   },
-  footerText: {
-    fontSize: 12,
-    textAlign: 'center',
-    opacity: 0.6,
-    marginBottom: 8,
+  infoCard: {
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  footerSubtext: {
-    fontSize: 10,
-    opacity: 0.5,
-    fontStyle: 'italic',
+  infoGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    gap: 12,
   },
-  debugContainer: {
-    marginTop: 10,
-    padding: 8,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 4,
-  },
-  debugText: {
-    fontSize: 10,
-    opacity: 0.7,
-    fontFamily: 'monospace',
+  infoText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
