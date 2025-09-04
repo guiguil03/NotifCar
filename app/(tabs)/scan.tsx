@@ -118,7 +118,7 @@ export default function ScanScreen() {
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={gradientStart} />
         <LinearGradient
-          colors={[gradientStart, gradientEnd]}
+          colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
           style={styles.loadingContainer}
         >
           <View style={styles.loadingContent}>
@@ -147,7 +147,7 @@ export default function ScanScreen() {
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={gradientStart} />
         <LinearGradient
-          colors={[gradientStart, gradientEnd]}
+          colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
           style={styles.permissionContainer}
         >
           <Animated.View
@@ -205,7 +205,7 @@ export default function ScanScreen() {
         <View style={styles.overlay}>
           {/* Header avec gradient */}
           <LinearGradient
-            colors={['rgba(0,0,0,0.8)', 'rgba(0,0,0,0.4)', 'transparent']}
+            colors={['rgba(30,27,75,0.9)', 'rgba(49,46,129,0.7)', 'rgba(124,58,237,0.3)', 'transparent']}
             style={styles.headerGradient}
           >
             <Animated.View

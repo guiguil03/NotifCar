@@ -11,7 +11,7 @@ export default function BlurTabBarBackground() {
 
   return (
     <LinearGradient
-      colors={[gradientStart, gradientEnd]}
+      colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={StyleSheet.absoluteFill}

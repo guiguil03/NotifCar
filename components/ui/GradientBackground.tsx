@@ -22,19 +22,21 @@ export function GradientBackground({
   const gradientAccent = useThemeColor({}, 'gradientAccent');
 
   const getGradientColors = () => {
+    const violetGradient = ['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED'];
+    
     switch (variant) {
       case 'primary':
-        return [gradientStart, gradientEnd];
+        return violetGradient;
       case 'secondary':
-        return [gradientEnd, gradientStart];
+        return ['#7C3AED', '#4C1D95', '#312E81', '#1E1B4B'];
       case 'accent':
-        return [gradientAccent, gradientLight];
+        return ['#7C3AED', '#5B21B6', '#4C1D95'];
       case 'light':
-        return [gradientLight, gradientAccent];
+        return ['#E9D5FF', '#DDD6FE', '#C4B5FD'];
       case 'dark':
-        return [gradientStart, gradientEnd];
+        return violetGradient;
       default:
-        return [gradientStart, gradientEnd];
+        return violetGradient;
     }
   };
 

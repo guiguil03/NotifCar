@@ -33,10 +33,75 @@ export class QRCodeService {
    */
   static async saveQRCodeToDevice(qrString: string, vehicleName: string): Promise<string> {
     try {
-      const fileName = `notifcar_${vehicleName.replace(/\s+/g, '_')}_${Date.now()}.txt`;
+      // Utiliser l'API QR Server pour générer l'image du QR code
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrString)}&format=png&color=000000&bgcolor=FFFFFF&margin=10&ecc=M`;
+      
+      // Créer un HTML simple avec le QR code
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              margin: 0;
+              padding: 20px;
+              background: white;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              font-family: Arial, sans-serif;
+            }
+            .container {
+              text-align: center;
+              max-width: 300px;
+            }
+            .vehicle-name {
+              font-size: 18px;
+              font-weight: bold;
+              color: #1F2937;
+              margin-bottom: 20px;
+            }
+            .qr-image {
+              width: 200px;
+              height: 200px;
+              margin: 20px auto;
+              border: 2px solid #E5E7EB;
+              border-radius: 10px;
+              background: white;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .qr-text {
+              font-family: monospace;
+              font-size: 12px;
+              color: #6B7280;
+              background: #F9FAFB;
+              padding: 10px;
+              border-radius: 8px;
+              word-break: break-all;
+              margin-top: 15px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="vehicle-name">${vehicleName}</div>
+            <div class="qr-image">
+              <img src="${qrCodeUrl}" alt="QR Code" style="max-width: 100%; max-height: 100%;" />
+            </div>
+            <div class="qr-text">${qrString}</div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const fileName = `notifcar_${vehicleName.replace(/\s+/g, '_')}_${Date.now()}.html`;
       const filePath = `${FileSystem.documentDirectory}${fileName}`;
       
-      await FileSystem.writeAsStringAsync(filePath, qrString);
+      await FileSystem.writeAsStringAsync(filePath, html);
       
       return filePath;
     } catch (error) {
@@ -69,6 +134,23 @@ export class QRCodeService {
     } catch (error) {
       console.error('Erreur lors de la validation du QR code:', error);
       return { isValid: false };
+    }
+  }
+
+  /**
+   * Partage le QR code
+   */
+  static async shareQRCode(vehicleId: string): Promise<void> {
+    try {
+      const { Share } = await import('react-native');
+      
+      await Share.share({
+        message: `QR Code NotifCar - Véhicule ID: ${vehicleId}\n\nScannez ce code pour accéder aux informations du véhicule.`,
+        title: 'QR Code NotifCar',
+      });
+    } catch (error) {
+      console.error('Erreur lors du partage du QR code:', error);
+      throw new Error('Impossible de partager le QR code');
     }
   }
 }

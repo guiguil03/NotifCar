@@ -1,8 +1,6 @@
 import { ThemedText } from '@/components/ThemedText';
-import { VioletCard } from '@/components/ui/VioletCard';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -99,32 +97,29 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header avec gradient */}
-        <LinearGradient
-          colors={[gradientStart, gradientEnd]}
-          style={styles.header}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
+        {/* Header simple */}
+        <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.headerIcon}>
-              <Ionicons name="car" size={32} color="white" />
+              <Ionicons name="car" size={28} color="#3B82F6" />
             </View>
-            <ThemedText style={styles.title}>{title}</ThemedText>
-            <ThemedText style={styles.subtitle}>
-              Renseignez les informations de votre véhicule
-            </ThemedText>
+            <View style={styles.headerText}>
+              <ThemedText style={styles.title}>{title}</ThemedText>
+              <ThemedText style={styles.subtitle}>
+                Renseignez les informations de votre véhicule
+              </ThemedText>
+            </View>
           </View>
-        </LinearGradient>
+        </View>
 
         {/* Formulaire */}
         <View style={styles.formContainer}>
-          <VioletCard variant="light" style={styles.formCard}>
+          <View style={styles.formCard}>
             {/* Nom du véhicule */}
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="car-outline" size={18} color="#7C3AED" />
+                  <Ionicons name="car-outline" size={18} color="#3B82F6" />
                 </View>
                 <ThemedText style={styles.label}>Nom du véhicule (optionnel)</ThemedText>
               </View>
@@ -145,7 +140,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
               <View style={styles.halfWidth}>
                 <View style={styles.labelContainer}>
                   <View style={styles.iconContainer}>
-                    <Ionicons name="business" size={18} color="#7C3AED" />
+                    <Ionicons name="business" size={18} color="#3B82F6" />
                   </View>
                   <ThemedText style={styles.label}>
                     Marque <ThemedText style={styles.required}>*</ThemedText>
@@ -171,7 +166,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
               <View style={styles.halfWidth}>
                 <View style={styles.labelContainer}>
                   <View style={styles.iconContainer}>
-                    <Ionicons name="car-sport" size={18} color="#7C3AED" />
+                    <Ionicons name="car-sport" size={18} color="#3B82F6" />
                   </View>
                   <ThemedText style={styles.label}>
                     Modèle <ThemedText style={styles.required}>*</ThemedText>
@@ -201,7 +196,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
               <View style={styles.halfWidth}>
                 <View style={styles.labelContainer}>
                   <View style={styles.iconContainer}>
-                    <Ionicons name="calendar" size={18} color="#7C3AED" />
+                    <Ionicons name="calendar" size={18} color="#3B82F6" />
                   </View>
                   <ThemedText style={styles.label}>
                     Année <ThemedText style={styles.required}>*</ThemedText>
@@ -230,7 +225,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
               <View style={styles.halfWidth}>
                 <View style={styles.labelContainer}>
                   <View style={styles.iconContainer}>
-                    <Ionicons name="card" size={18} color="#7C3AED" />
+                    <Ionicons name="card" size={18} color="#3B82F6" />
                   </View>
                   <ThemedText style={styles.label}>
                     Plaque <ThemedText style={styles.required}>*</ThemedText>
@@ -259,7 +254,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="color-palette" size={18} color="#7C3AED" />
+                  <Ionicons name="color-palette" size={18} color="#3B82F6" />
                 </View>
                 <ThemedText style={styles.label}>Couleur</ThemedText>
               </View>
@@ -279,7 +274,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="document-text" size={18} color="#7C3AED" />
+                  <Ionicons name="document-text" size={18} color="#3B82F6" />
                 </View>
                 <ThemedText style={styles.label}>Notes</ThemedText>
               </View>
@@ -296,7 +291,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 returnKeyType="done"
               />
             </View>
-          </VioletCard>
+          </View>
 
           {/* Boutons d'action - Fixés en bas */}
           <View style={styles.actionsContainer}>
@@ -305,7 +300,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
               onPress={onCancel}
               disabled={isSubmitting}
             >
-              <Ionicons name="close" size={20} color="#6B7280" />
+              <Ionicons name="close" size={18} color="#6B7280" />
               <ThemedText style={styles.cancelButtonText}>Annuler</ThemedText>
             </TouchableOpacity>
             
@@ -314,21 +309,14 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
               onPress={handleSubmit}
               disabled={isSubmitting}
             >
-              <LinearGradient
-                colors={isSubmitting ? ['#9CA3AF', '#6B7280'] : [gradientStart, gradientEnd]}
-                style={styles.submitButtonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                {isSubmitting ? (
-                  <Ionicons name="hourglass" size={20} color="white" />
-                ) : (
-                  <Ionicons name="checkmark" size={20} color="white" />
-                )}
-                <ThemedText style={styles.submitButtonText}>
-                  {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
-                </ThemedText>
-              </LinearGradient>
+              {isSubmitting ? (
+                <Ionicons name="hourglass" size={18} color="white" />
+              ) : (
+                <Ionicons name="checkmark" size={18} color="white" />
+              )}
+              <ThemedText style={styles.submitButtonText}>
+                {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
+              </ThemedText>
             </TouchableOpacity>
           </View>
         </View>
@@ -348,36 +336,39 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: 40,
+    backgroundColor: 'white',
+    paddingTop: 20,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   headerContent: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
   headerIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginRight: 12,
+  },
+  headerText: {
+    flex: 1,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: 'white',
-    marginBottom: 8,
-    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-    lineHeight: 22,
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
   },
   formContainer: {
     flex: 1,
@@ -385,14 +376,17 @@ const styles = StyleSheet.create({
     paddingTop: 30,
   },
   formCard: {
+    backgroundColor: 'white',
     marginBottom: 30,
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   inputGroup: {
     marginBottom: 24,
@@ -482,25 +476,23 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     flex: 2,
-    height: 60,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  submitButtonDisabled: {
-    shadowOpacity: 0.1,
-    elevation: 2,
-  },
-  submitButtonGradient: {
-    flex: 1,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: '#3B82F6',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+    shadowOpacity: 0.1,
+    elevation: 1,
   },
   submitButtonText: {
     fontSize: 16,

@@ -1,6 +1,6 @@
+import * as FileSystem from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
 import { QRCodeData } from './cloudStorageService';
 
 export class PrintService {
@@ -8,6 +8,9 @@ export class PrintService {
    * Génère un PDF pour l'impression du QR code
    */
   static async generateQRCodePDF(qrData: QRCodeData): Promise<string> {
+    // Utiliser l'API QR Server pour générer l'image du QR code
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData.qrString)}&format=png&color=000000&bgcolor=FFFFFF&margin=10&ecc=M`;
+    
     const html = `
       <!DOCTYPE html>
       <html>
@@ -62,6 +65,17 @@ export class PrintService {
             margin: 30px 0;
             border: 2px dashed #E5E7EB;
           }
+          .qr-image {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 20px auto;
+            border: 2px solid #E5E7EB;
+            border-radius: 10px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
           .qr-code {
             font-family: monospace;
             font-size: 14px;
@@ -71,6 +85,7 @@ export class PrintService {
             border-radius: 10px;
             border: 1px solid #E5E7EB;
             word-break: break-all;
+            margin-top: 15px;
           }
           .instructions {
             margin-top: 30px;
@@ -112,20 +127,6 @@ export class PrintService {
             color: #6B7280;
             font-size: 14px;
           }
-          .qr-visual {
-            width: 200px;
-            height: 200px;
-            background: #1F2937;
-            margin: 20px auto;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 12px;
-            text-align: center;
-            line-height: 1.4;
-          }
         </style>
       </head>
       <body>
@@ -137,9 +138,8 @@ export class PrintService {
           </div>
           
           <div class="qr-container">
-            <div class="qr-visual">
-              [QR CODE]<br/>
-              ${qrData.qrString}
+            <div class="qr-image">
+              <img src="${qrCodeUrl}" alt="QR Code" style="max-width: 100%; max-height: 100%;" />
             </div>
             <div class="qr-code">${qrData.qrString}</div>
           </div>

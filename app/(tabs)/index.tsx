@@ -95,7 +95,7 @@ export default function HomeScreen() {
       
       {/* Header avec gradient violet */}
       <LinearGradient
-        colors={[gradientStart, gradientEnd, gradientLight]}
+        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
         style={styles.headerGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

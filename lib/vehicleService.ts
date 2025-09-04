@@ -27,10 +27,13 @@ export class VehicleService {
       // Générer un nom à partir de brand + model si pas fourni
       const vehicleName = vehicleData.name || `${vehicleData.brand} ${vehicleData.model}`;
       
+      const vehicleId = this.generateVehicleId();
+      const qrCodeId = vehicleData.qrCodeId || this.generateVehicleId(); // Générer un UUID unique
+      
       const { data, error } = await supabase
         .from('vehicles')
         .insert({
-          id: this.generateVehicleId(),
+          id: vehicleId,
           user_id: vehicleData.ownerId,
           brand: vehicleData.brand,
           model: vehicleData.model,
@@ -38,7 +41,7 @@ export class VehicleService {
           license_plate: vehicleData.licensePlate,
           color: vehicleData.color || null,
           notes: vehicleData.notes || null,
-          qr_code: vehicleData.qrCodeId || 'pending', // Valeur par défaut au lieu de null
+          qr_code: qrCodeId, // Utiliser l'UUID unique
           is_active: vehicleData.isActive ?? true,
         })
         .select()
@@ -61,7 +64,7 @@ export class VehicleService {
         color: data.color,
         notes: data.notes,
         ownerId: data.user_id,
-        qrCodeId: data.qr_code === 'pending' ? null : data.qr_code,
+        qrCodeId: data.qr_code,
         isActive: data.is_active,
         createdAt: data.created_at,
         updatedAt: data.updated_at,
@@ -102,7 +105,7 @@ export class VehicleService {
         color: item.color,
         notes: item.notes,
         ownerId: item.user_id,
-        qrCodeId: item.qr_code === 'pending' ? null : item.qr_code,
+        qrCodeId: item.qr_code,
         isActive: item.is_active,
         createdAt: item.created_at,
         updatedAt: item.updated_at,
@@ -153,7 +156,7 @@ export class VehicleService {
         color: data.color,
         notes: data.notes,
         ownerId: data.user_id,
-        qrCodeId: data.qr_code === 'pending' ? null : data.qr_code,
+        qrCodeId: data.qr_code,
         isActive: data.is_active,
         createdAt: data.created_at,
         updatedAt: data.updated_at,

@@ -98,9 +98,9 @@ export default function AuthScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
       
-      {/* Background avec gradient */}
+      {/* Background avec gradient violet moderne */}
       <LinearGradient
-        colors={['#1E3A8A', '#3B82F6', '#60A5FA']}
+        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
         style={styles.backgroundGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -133,7 +133,7 @@ export default function AuthScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.logoGradient}
               >
-                <Ionicons name="car-sport" size={48} color="#1E3A8A" />
+                <Ionicons name="car-sport" size={48} color="#7C3AED" />
               </LinearGradient>
             </View>
             
@@ -268,7 +268,7 @@ export default function AuthScreen() {
                   disabled={loading}
                 >
                   <LinearGradient
-                    colors={[primaryColor, '#3B82F6']}
+                    colors={['#7C3AED', '#5B21B6', '#4C1D95']}
                     style={styles.authButtonGradient}
                   >
                     {loading ? (

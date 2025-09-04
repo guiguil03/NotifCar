@@ -1,9 +1,9 @@
 import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState, useRef, useEffect } from 'react';
-import { Alert, ScrollView, StyleSheet, TouchableOpacity, View, Animated, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface Notification {
   id: string;
@@ -159,9 +159,9 @@ export default function NotificationsScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
       
-      {/* Header avec gradient */}
+      {/* Header avec gradient violet moderne */}
       <LinearGradient
-        colors={['#1E3A8A', '#3B82F6', '#60A5FA']}
+        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
         style={styles.headerGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -234,10 +234,10 @@ export default function NotificationsScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.statGradient}
               >
-                <View style={[styles.statIcon, { backgroundColor: primaryColor }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#7C3AED' }]}>
                   <Ionicons name="notifications" size={20} color="white" />
                 </View>
-                <ThemedText style={[styles.statNumber, { color: primaryColor }]}>
+                <ThemedText style={[styles.statNumber, { color: '#7C3AED' }]}>
                   {notifications.length}
                 </ThemedText>
                 <ThemedText style={styles.statLabel}>Total</ThemedText>
@@ -249,10 +249,10 @@ export default function NotificationsScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.statGradient}
               >
-                <View style={[styles.statIcon, { backgroundColor: warningColor }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#F59E0B' }]}>
                   <Ionicons name="mail-unread" size={20} color="white" />
                 </View>
-                <ThemedText style={[styles.statNumber, { color: warningColor }]}>
+                <ThemedText style={[styles.statNumber, { color: '#F59E0B' }]}>
                   {unreadCount}
                 </ThemedText>
                 <ThemedText style={styles.statLabel}>Non lues</ThemedText>
@@ -264,10 +264,10 @@ export default function NotificationsScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.statGradient}
               >
-                <View style={[styles.statIcon, { backgroundColor: errorColor }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#EF4444' }]}>
                   <Ionicons name="alert-circle" size={20} color="white" />
                 </View>
-                <ThemedText style={[styles.statNumber, { color: errorColor }]}>
+                <ThemedText style={[styles.statNumber, { color: '#EF4444' }]}>
                   {notifications.filter(n => n.type === 'urgent').length}
                 </ThemedText>
                 <ThemedText style={styles.statLabel}>Urgentes</ThemedText>
@@ -297,7 +297,7 @@ export default function NotificationsScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.emptyStateGradient}
               >
-                <View style={[styles.emptyIcon, { backgroundColor: primaryColor }]}>
+                <View style={[styles.emptyIcon, { backgroundColor: '#7C3AED' }]}>
                   <Ionicons name="notifications-off" size={40} color="white" />
                 </View>
                 <ThemedText style={styles.emptyTitle}>Aucune notification</ThemedText>
@@ -355,7 +355,7 @@ export default function NotificationsScreen() {
                             {notification.title}
                           </ThemedText>
                           {!notification.isRead && (
-                            <View style={[styles.unreadDot, { backgroundColor: primaryColor }]} />
+                            <View style={[styles.unreadDot, { backgroundColor: '#7C3AED' }]} />
                           )}
                         </View>
                         
@@ -364,7 +364,7 @@ export default function NotificationsScreen() {
                         </ThemedText>
                         
                         <View style={styles.vehicleInfoContainer}>
-                          <Ionicons name="car" size={16} color={primaryColor} />
+                          <Ionicons name="car" size={16} color="#7C3AED" />
                           <ThemedText style={styles.vehicleInfo}>
                             {notification.vehicle}
                           </ThemedText>
@@ -391,11 +391,11 @@ export default function NotificationsScreen() {
                     <View style={styles.notificationActions}>
                       {!notification.isRead && (
                         <TouchableOpacity
-                          style={[styles.actionButton, { backgroundColor: primaryColor }]}
+                          style={[styles.actionButton, { backgroundColor: '#7C3AED' }]}
                           onPress={() => handleMarkAsRead(notification.id)}
                         >
                           <LinearGradient
-                            colors={[primaryColor, '#3B82F6']}
+                            colors={['#7C3AED', '#5B21B6']}
                             style={styles.actionButtonGradient}
                           >
                             <Ionicons name="checkmark" size={16} color="white" />
@@ -405,11 +405,11 @@ export default function NotificationsScreen() {
                       )}
                       
                       <TouchableOpacity
-                        style={[styles.actionButton, { backgroundColor: errorColor }]}
+                        style={[styles.actionButton, { backgroundColor: '#EF4444' }]}
                         onPress={() => handleDeleteNotification(notification.id)}
                       >
                         <LinearGradient
-                          colors={[errorColor, '#F87171']}
+                          colors={['#EF4444', '#DC2626']}
                           style={styles.actionButtonGradient}
                         >
                           <Ionicons name="trash" size={16} color="white" />

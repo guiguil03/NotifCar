@@ -239,9 +239,9 @@ export default function OnboardingScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
       
-      {/* Background avec gradient */}
+      {/* Background avec gradient violet */}
       <LinearGradient
-        colors={['#1E3A8A', '#3B82F6', '#60A5FA']}
+        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
         style={styles.backgroundGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

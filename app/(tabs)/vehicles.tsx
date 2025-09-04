@@ -11,7 +11,7 @@ import { Vehicle, VehicleService } from '@/lib/vehicleService';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function VehiclesScreen() {
   const { user } = useAuth();
@@ -74,7 +74,8 @@ export default function VehiclesScreen() {
           ownerId: user.id,
         });
 
-        // Générer automatiquement un QR code pour le nouveau véhicule
+        // Le QR code a déjà été généré automatiquement lors de la création
+        // Utiliser le QR code ID existant pour générer le QR code visuel
         try {
           const qrData: VehicleQRData = {
             vehicleName: newVehicle.name,
@@ -82,10 +83,8 @@ export default function VehiclesScreen() {
             type: 'notifcar',
           };
           
-          const qrResult = await QRCodeService.generateVehicleQRCode(qrData);
-          
-          // Lier le QR code au véhicule
-          await VehicleService.linkQRCodeToVehicle(newVehicle.id, qrResult.vehicleId);
+          // Le QR code ID est déjà dans newVehicle.qrCodeId
+          // Pas besoin de le lier, il est déjà lié
           
           Alert.alert(
             'Succès', 
@@ -95,17 +94,17 @@ export default function VehiclesScreen() {
               { 
                 text: 'Voir QR Code', 
                 onPress: () => {
-                  setSelectedVehicle({ ...newVehicle, qrCodeId: qrResult.vehicleId });
+                  setSelectedVehicle(newVehicle);
                   setShowQRGenerator(true);
                 }
               }
             ]
           );
         } catch (qrError) {
-          console.error('Erreur génération QR code:', qrError);
+          console.error('Erreur affichage QR code:', qrError);
           Alert.alert(
-            'Succès partiel', 
-            'Véhicule ajouté avec succès, mais impossible de générer le QR code. Vous pourrez le générer manuellement.',
+            'Succès', 
+            'Véhicule ajouté avec succès !',
             [{ text: 'OK' }]
           );
         }
@@ -176,6 +175,31 @@ export default function VehiclesScreen() {
     }
   };
 
+  const shareVehicleQR = async (vehicle: Vehicle) => {
+    try {
+      if (!vehicle.qrCodeId) {
+        Alert.alert('Erreur', 'Aucun QR code généré pour ce véhicule');
+        return;
+      }
+
+      // Créer un objet QRCodeData temporaire pour le partage
+      const qrData = {
+        id: vehicle.qrCodeId,
+        vehicleId: vehicle.qrCodeId,
+        vehicleName: vehicle.name,
+        ownerId: user?.id || '',
+        qrString: `notifcar:${vehicle.qrCodeId}:${user?.id}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      await QRCodeService.shareQRCode(vehicle.qrCodeId);
+    } catch (error) {
+      console.error('Erreur partage QR code:', error);
+      Alert.alert('Erreur', 'Impossible de partager le QR code');
+    }
+  };
+
   const closeQRGenerator = () => {
     setShowQRGenerator(false);
     setSelectedVehicle(null);
@@ -185,7 +209,7 @@ export default function VehiclesScreen() {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={[gradientStart, gradientEnd]}
+          colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
           style={styles.header}
         >
           <View style={styles.headerContent}>
@@ -227,7 +251,7 @@ export default function VehiclesScreen() {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={[gradientStart, gradientEnd]}
+          colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
           style={styles.header}
         >
           <View style={styles.headerContent}>
@@ -262,7 +286,7 @@ export default function VehiclesScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[gradientStart, gradientEnd]}
+        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
         style={styles.header}
         >
           <View style={styles.headerContent}>
@@ -302,80 +326,121 @@ export default function VehiclesScreen() {
           </VioletCard>
         ) : (
           vehicles.map((vehicle) => (
-            <VioletCard key={vehicle.id} variant="light" style={styles.vehicleCard}>
+            <View key={vehicle.id} style={styles.vehicleCard}>
+              {/* Header principal avec icône et nom */}
               <View style={styles.vehicleHeader}>
-                <View style={styles.vehicleInfo}>
-                  <ThemedText style={styles.vehicleName}>
-                    {vehicle.name}
-                  </ThemedText>
-                  <ThemedText style={styles.vehicleDetails}>
-                    {vehicle.brand} {vehicle.model} ({vehicle.year})
-                  </ThemedText>
-                  <ThemedText style={styles.vehiclePlate}>
-                    {vehicle.licensePlate}
-                  </ThemedText>
-                  {vehicle.color && (
-                    <ThemedText style={styles.vehicleColor}>
-                      Couleur: {vehicle.color}
-                    </ThemedText>
-                  )}
+                <View style={styles.vehicleIcon}>
+                  <Ionicons name="car" size={28} color="#374151" />
                 </View>
-                
+                <View style={styles.vehicleMainInfo}>
+                  <ThemedText style={styles.vehicleName}>{vehicle.name}</ThemedText>
+                  <ThemedText style={styles.vehicleSubtitle}>
+                    {vehicle.brand} {vehicle.model} • {vehicle.year}
+                  </ThemedText>
+                </View>
                 <View style={styles.vehicleStatus}>
                   {vehicle.qrCodeId ? (
-                    <View style={styles.statusContainer}>
-                      <Ionicons name="checkmark-circle" size={24} color={successColor} />
-                      <ThemedText style={styles.statusText}>QR Code généré</ThemedText>
+                    <View style={styles.statusBadge}>
+                      <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                      <ThemedText style={styles.statusText}>Prêt</ThemedText>
                     </View>
                   ) : (
-                    <View style={styles.statusContainer}>
-                      <Ionicons name="qr-code-outline" size={24} color={primaryColor} />
-                      <ThemedText style={styles.statusText}>QR Code requis</ThemedText>
+                    <View style={[styles.statusBadge, styles.statusPending]}>
+                      <Ionicons name="alert-circle" size={16} color="#F59E0B" />
+                      <ThemedText style={styles.statusText}>QR requis</ThemedText>
                     </View>
                   )}
                 </View>
               </View>
 
-              <View style={styles.vehicleActions}>
-                <View style={styles.actionRow}>
-                  <VioletButton
-                    title="Modifier"
-                    onPress={() => editVehicle(vehicle)}
-                    variant="outline"
-                    size="small"
-                    style={styles.actionButton}
-                  />
-                  {!vehicle.qrCodeId ? (
-                    <VioletButton
-                      title="Générer QR"
-                      onPress={() => generateQRCode(vehicle)}
-                      variant="primary"
-                      size="small"
-                      style={styles.actionButton}
-                    />
-                  ) : (
-                    <>
-                      <VioletButton
-                        title="Voir QR"
-                        onPress={() => generateQRCode(vehicle)}
-                        variant="secondary"
-                        size="small"
-                        style={styles.actionButton}
-                      />
-                      <VioletButton
-                        title="Imprimer"
-                        onPress={() => printQRCode(vehicle)}
-                        variant="accent"
-                        size="small"
-                        style={styles.actionButton}
-                      />
-                    </>
+              {/* Détails du véhicule */}
+              <View style={styles.vehicleDetails}>
+                <View style={styles.detailRow}>
+                  <View style={styles.detailItem}>
+                    <Ionicons name="card" size={16} color="#6B7280" />
+                    <ThemedText style={styles.detailLabel}>Plaque</ThemedText>
+                    <ThemedText style={styles.detailValue}>{vehicle.licensePlate}</ThemedText>
+                  </View>
+                  {vehicle.color && (
+                    <View style={styles.detailItem}>
+                      <Ionicons name="color-palette" size={16} color="#6B7280" />
+                      <ThemedText style={styles.detailLabel}>Couleur</ThemedText>
+                      <ThemedText style={styles.detailValue}>{vehicle.color}</ThemedText>
+                    </View>
                   )}
                 </View>
+                
+                {vehicle.notes && (
+                  <View style={styles.notesSection}>
+                    <Ionicons name="document-text" size={16} color="#6B7280" />
+                    <ThemedText style={styles.notesText} numberOfLines={2}>
+                      {vehicle.notes}
+                    </ThemedText>
+                  </View>
+                )}
               </View>
-            </VioletCard>
-          ))
-        )}
+
+              {/* Actions principales - Plus visibles */}
+              <View style={styles.vehicleActions}>
+                <View style={styles.primaryActions}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => editVehicle(vehicle)}
+                  >
+                    <Ionicons name="create" size={18} color="#374151" />
+                    <ThemedText style={styles.actionText}>Modifier</ThemedText>
+                  </TouchableOpacity>
+
+                  {!vehicle.qrCodeId ? (
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.primaryAction]}
+                      onPress={() => generateQRCode(vehicle)}
+                    >
+                      <Ionicons name="qr-code" size={18} color="white" />
+                      <ThemedText style={[styles.actionText, styles.primaryActionText]}>
+                        Générer QR Code
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.primaryAction]}
+                      onPress={() => {
+                        setSelectedVehicle(vehicle);
+                        setShowQRGenerator(true);
+                      }}
+                    >
+                      <Ionicons name="eye" size={18} color="white" />
+                      <ThemedText style={[styles.actionText, styles.primaryActionText]}>
+                        Voir QR Code
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Actions secondaires pour QR code existant */}
+                {vehicle.qrCodeId && (
+                  <View style={styles.secondaryActions}>
+                    <TouchableOpacity
+                      style={styles.secondaryButton}
+                      onPress={() => shareVehicleQR(vehicle)}
+                    >
+                      <Ionicons name="share" size={16} color="#6B7280" />
+                      <ThemedText style={styles.secondaryText}>Partager</ThemedText>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={styles.secondaryButton}
+                      onPress={() => printQRCode(vehicle)}
+                    >
+                      <Ionicons name="print" size={16} color="#6B7280" />
+                      <ThemedText style={styles.secondaryText}>Imprimer</ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            </View>
+            ))
+          )}
       </ScrollView>
     </View>
   );
@@ -437,59 +502,156 @@ const styles = StyleSheet.create({
     minWidth: 200,
   },
   vehicleCard: {
+    backgroundColor: 'white',
     marginBottom: 16,
+    marginHorizontal: 4,
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   vehicleHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 16,
   },
-  vehicleInfo: {
+  vehicleIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  vehicleMainInfo: {
     flex: 1,
   },
   vehicleName: {
     fontSize: 18,
     fontWeight: '700',
+    color: '#111827',
     marginBottom: 4,
   },
-  vehicleDetails: {
+  vehicleSubtitle: {
     fontSize: 14,
-    opacity: 0.7,
-    marginBottom: 2,
-  },
-  vehiclePlate: {
-    fontSize: 14,
-    fontWeight: '600',
-    opacity: 0.8,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   vehicleStatus: {
     alignItems: 'flex-end',
   },
-  statusContainer: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#D1FAE5',
+  },
+  statusPending: {
+    backgroundColor: '#FEF3C7',
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
+    color: '#065F46',
+  },
+  vehicleDetails: {
+    marginBottom: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    gap: 20,
+    marginBottom: 12,
+  },
+  detailItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+    minWidth: 50,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '600',
+  },
+  notesSection: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 8,
+  },
+  notesText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontStyle: 'italic',
+    flex: 1,
   },
   vehicleActions: {
+    gap: 12,
+  },
+  primaryActions: {
     flexDirection: 'row',
     gap: 12,
   },
   actionButton: {
     flex: 1,
-    marginHorizontal: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  actionRow: {
+  primaryAction: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  actionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  primaryActionText: {
+    color: 'white',
+  },
+  secondaryActions: {
     flexDirection: 'row',
     gap: 8,
   },
-  vehicleColor: {
-    fontSize: 14,
-    opacity: 0.7,
-    marginTop: 4,
+  secondaryButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  secondaryText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
   },
 });

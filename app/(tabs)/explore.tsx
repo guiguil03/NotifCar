@@ -82,9 +82,9 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
       
-      {/* Header avec gradient */}
+      {/* Header avec gradient violet moderne */}
       <LinearGradient
-        colors={['#1E3A8A', '#3B82F6', '#60A5FA']}
+        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
         style={styles.headerGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -104,7 +104,7 @@ export default function ProfileScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.avatarGradient}
               >
-                <Ionicons name="person" size={40} color="#1E3A8A" />
+                <Ionicons name="person" size={40} color="#7C3AED" />
               </LinearGradient>
             </View>
             
@@ -148,10 +148,10 @@ export default function ProfileScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.statGradient}
               >
-                <View style={[styles.statIcon, { backgroundColor: primaryColor }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#7C3AED' }]}>
                   <Ionicons name="car" size={20} color="white" />
                 </View>
-                <ThemedText style={[styles.statNumber, { color: primaryColor }]}>1</ThemedText>
+                <ThemedText style={[styles.statNumber, { color: '#7C3AED' }]}>1</ThemedText>
                 <ThemedText style={styles.statLabel}>Véhicule</ThemedText>
               </LinearGradient>
             </View>
@@ -161,10 +161,10 @@ export default function ProfileScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.statGradient}
               >
-                <View style={[styles.statIcon, { backgroundColor: secondaryColor }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#F59E0B' }]}>
                   <Ionicons name="notifications" size={20} color="white" />
                 </View>
-                <ThemedText style={[styles.statNumber, { color: secondaryColor }]}>3</ThemedText>
+                <ThemedText style={[styles.statNumber, { color: '#F59E0B' }]}>3</ThemedText>
                 <ThemedText style={styles.statLabel}>Notifications</ThemedText>
               </LinearGradient>
             </View>
@@ -174,10 +174,10 @@ export default function ProfileScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.statGradient}
               >
-                <View style={[styles.statIcon, { backgroundColor: successColor }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#10B981' }]}>
                   <Ionicons name="shield-checkmark" size={20} color="white" />
                 </View>
-                <ThemedText style={[styles.statNumber, { color: successColor }]}>100%</ThemedText>
+                <ThemedText style={[styles.statNumber, { color: '#10B981' }]}>100%</ThemedText>
                 <ThemedText style={styles.statLabel}>Sécurisé</ThemedText>
               </LinearGradient>
             </View>
@@ -207,7 +207,7 @@ export default function ProfileScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.quickActionGradient}
               >
-                <View style={[styles.quickActionIcon, { backgroundColor: primaryColor }]}>
+                <View style={[styles.quickActionIcon, { backgroundColor: '#7C3AED' }]}>
                   <Ionicons name="settings" size={24} color="white" />
                 </View>
                 <ThemedText style={styles.quickActionTitle}>Paramètres</ThemedText>
@@ -220,7 +220,7 @@ export default function ProfileScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.quickActionGradient}
               >
-                <View style={[styles.quickActionIcon, { backgroundColor: secondaryColor }]}>
+                <View style={[styles.quickActionIcon, { backgroundColor: '#F59E0B' }]}>
                   <Ionicons name="help-circle" size={24} color="white" />
                 </View>
                 <ThemedText style={styles.quickActionTitle}>Aide</ThemedText>
@@ -254,7 +254,7 @@ export default function ProfileScreen() {
             >
               <TouchableOpacity style={styles.legalItem}>
                 <View style={styles.legalItemContent}>
-                  <Ionicons name="document-text" size={20} color={primaryColor} />
+                  <Ionicons name="document-text" size={20} color="#7C3AED" />
                   <ThemedText style={styles.legalItemText}>Conditions d&apos;utilisation</ThemedText>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
@@ -264,7 +264,7 @@ export default function ProfileScreen() {
               
               <TouchableOpacity style={styles.legalItem}>
                 <View style={styles.legalItemContent}>
-                  <Ionicons name="shield" size={20} color={primaryColor} />
+                  <Ionicons name="shield" size={20} color="#7C3AED" />
                   <ThemedText style={styles.legalItemText}>Politique de confidentialité</ThemedText>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
@@ -274,7 +274,7 @@ export default function ProfileScreen() {
               
               <TouchableOpacity style={styles.legalItem} onPress={handleAbout}>
                 <View style={styles.legalItemContent}>
-                  <Ionicons name="information-circle" size={20} color={primaryColor} />
+                  <Ionicons name="information-circle" size={20} color="#7C3AED" />
                   <ThemedText style={styles.legalItemText}>À propos</ThemedText>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
@@ -300,7 +300,7 @@ export default function ProfileScreen() {
         >
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <LinearGradient
-              colors={[errorColor, '#F87171']}
+              colors={['#EF4444', '#DC2626']}
               style={styles.logoutGradient}
             >
               <Ionicons name="log-out" size={24} color="white" />

@@ -1,15 +1,13 @@
 import { ThemedText } from '@/components/ThemedText';
 import { QRCodeDisplay } from '@/components/ui/QRCodeDisplay';
-import { VioletButton } from '@/components/ui/VioletButton';
-import { VioletCard } from '@/components/ui/VioletCard';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { CloudStorageService, QRCodeData } from '@/lib/cloudStorageService';
 import { PrintService } from '@/lib/printService';
+import { QRCaptureService } from '@/lib/qrCaptureService';
 import { QRCodeService, VehicleQRData } from '@/lib/qrCodeService';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Share, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, Share, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface QRCodeGeneratorProps {
   vehicleData: Omit<VehicleQRData, 'vehicleId' | 'createdAt'>;
@@ -24,6 +22,11 @@ export function QRCodeGenerator({ vehicleData, onQRGenerated }: QRCodeGeneratorP
   const [isSaving, setIsSaving] = useState(false);
   const [savedToCloud, setSavedToCloud] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  
+  // Référence pour la capture d'écran
+  const qrCodeRef = useRef<View>(null);
   
   const primaryColor = useThemeColor({}, 'primary');
   const gradientStart = useThemeColor({}, 'gradientStart');
@@ -169,128 +172,168 @@ export function QRCodeGenerator({ vehicleData, onQRGenerated }: QRCodeGeneratorP
 
   if (isGenerating) {
     return (
-      <VioletCard variant="light" style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <LinearGradient
-            colors={[gradientStart, gradientEnd]}
-            style={styles.loadingIcon}
-          >
-            <Ionicons name="qr-code" size={32} color="white" />
-          </LinearGradient>
+          <View style={styles.loadingIcon}>
+            <Ionicons name="qr-code" size={32} color="#7C3AED" />
+          </View>
           <ThemedText style={styles.loadingText}>
             Génération du QR code...
           </ThemedText>
         </View>
-      </VioletCard>
+      </View>
     );
   }
 
   if (!qrString) {
     return (
-      <VioletCard variant="light" style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle" size={32} color="#EF4444" />
           <ThemedText style={styles.errorText}>
             Impossible de générer le QR code
           </ThemedText>
-          <VioletButton
-            title="Réessayer"
+          <TouchableOpacity
+            style={styles.retryButton}
             onPress={generateQRCode}
-            variant="outline"
-            size="small"
-          />
+          >
+            <Ionicons name="refresh" size={16} color="#7C3AED" />
+            <ThemedText style={styles.retryText}>Réessayer</ThemedText>
+          </TouchableOpacity>
         </View>
-      </VioletCard>
+      </View>
     );
   }
 
   return (
-    <VioletCard variant="light" style={styles.container}>
+    <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <ThemedText style={styles.title}>
-          QR Code pour {vehicleData.vehicleName}
-        </ThemedText>
-        <ThemedText style={styles.subtitle}>
-          Collez ce QR code sur le pare-brise de votre véhicule
-        </ThemedText>
+        <View style={styles.headerIcon}>
+          <Ionicons name="qr-code" size={24} color="#7C3AED" />
+        </View>
+        <View style={styles.headerText}>
+          <ThemedText style={styles.title}>
+            QR Code - {vehicleData.vehicleName}
+          </ThemedText>
+          <ThemedText style={styles.subtitle}>
+            Collez ce QR code sur le pare-brise de votre véhicule
+          </ThemedText>
+        </View>
       </View>
 
-      <View style={styles.qrContainer}>
+      {/* QR Code Display */}
+      <View style={styles.qrSection}>
         <View style={styles.qrWrapper}>
           <QRCodeDisplay 
             value={qrString}
             size={200}
           />
         </View>
-        <ThemedText style={styles.qrCodeText}>
-          Code: {qrString}
-        </ThemedText>
+        <View style={styles.qrInfo}>
+          <ThemedText style={styles.qrLabel}>Code QR :</ThemedText>
+          <ThemedText style={styles.qrCodeText}>{qrString}</ThemedText>
+        </View>
       </View>
 
+      {/* Instructions */}
       <View style={styles.instructions}>
-        <View style={styles.instructionItem}>
-          <Ionicons name="print" size={20} color={primaryColor} />
-          <ThemedText style={styles.instructionText}>
-            Imprimez ce QR code
-          </ThemedText>
-        </View>
-        <View style={styles.instructionItem}>
-          <Ionicons name="cut" size={20} color={primaryColor} />
-          <ThemedText style={styles.instructionText}>
-            Découpez-le aux dimensions
-          </ThemedText>
-        </View>
-        <View style={styles.instructionItem}>
-          <Ionicons name="car" size={20} color={primaryColor} />
-          <ThemedText style={styles.instructionText}>
-            Collez-le sur le pare-brise
-          </ThemedText>
+        <ThemedText style={styles.instructionsTitle}>Instructions :</ThemedText>
+        <View style={styles.instructionList}>
+          <View style={styles.instructionItem}>
+            <View style={styles.instructionIcon}>
+              <Ionicons name="print" size={16} color="#6B7280" />
+            </View>
+            <ThemedText style={styles.instructionText}>
+              Imprimez ce QR code
+            </ThemedText>
+          </View>
+          <View style={styles.instructionItem}>
+            <View style={styles.instructionIcon}>
+              <Ionicons name="cut" size={16} color="#6B7280" />
+            </View>
+            <ThemedText style={styles.instructionText}>
+              Découpez-le aux dimensions
+            </ThemedText>
+          </View>
+          <View style={styles.instructionItem}>
+            <View style={styles.instructionIcon}>
+              <Ionicons name="car" size={16} color="#6B7280" />
+            </View>
+            <ThemedText style={styles.instructionText}>
+              Collez-le sur le pare-brise
+            </ThemedText>
+          </View>
         </View>
       </View>
 
-      <View style={styles.actions}>
-        <VioletButton
-          title={savedToCloud ? "✓ Sauvegardé" : "Sauvegarder"}
+      {/* Actions principales */}
+      <View style={styles.primaryActions}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.primaryButton]}
           onPress={saveToCloud}
-          variant={savedToCloud ? "accent" : "primary"}
-          size="medium"
           disabled={isSaving || savedToCloud}
-          style={styles.actionButton}
-        />
-        <VioletButton
-          title="Télécharger"
+        >
+          <Ionicons 
+            name={savedToCloud ? "checkmark-circle" : "cloud-upload"} 
+            size={18} 
+            color="white" 
+          />
+          <ThemedText style={styles.primaryButtonText}>
+            {savedToCloud ? "✓ Sauvegardé" : "Sauvegarder"}
+          </ThemedText>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionButton, styles.secondaryButton]}
           onPress={downloadQRCode}
-          variant="outline"
-          size="medium"
           disabled={isDownloading}
-          style={styles.actionButton}
-        />
+        >
+          <Ionicons name="download" size={18} color="#7C3AED" />
+          <ThemedText style={styles.secondaryButtonText}>
+            Télécharger
+          </ThemedText>
+        </TouchableOpacity>
       </View>
       
-      <View style={styles.actions}>
-        <VioletButton
-          title="Partager"
+      {/* Actions secondaires */}
+      <View style={styles.secondaryActions}>
+        <TouchableOpacity
+          style={styles.secondaryActionButton}
           onPress={() => shareQRCode()}
-          variant="outline"
-          size="medium"
-          style={styles.actionButton}
-        />
-        <VioletButton
-          title={isPrinting ? "Impression..." : "Imprimer"}
+        >
+          <Ionicons name="share" size={16} color="#7C3AED" />
+          <ThemedText style={styles.secondaryActionText}>Partager</ThemedText>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.secondaryActionButton}
           onPress={printQRCode}
-          variant="accent"
-          size="medium"
           disabled={isPrinting}
-          style={styles.actionButton}
-        />
+        >
+          <Ionicons name="print" size={16} color="#7C3AED" />
+          <ThemedText style={styles.secondaryActionText}>
+            {isPrinting ? "Impression..." : "Imprimer"}
+          </ThemedText>
+        </TouchableOpacity>
       </View>
-    </VioletCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: 'white',
     margin: 16,
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   loadingContainer: {
     alignItems: 'center',
@@ -300,6 +343,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -307,7 +351,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     fontWeight: '600',
-    textAlign: 'center',
+    color: '#374151',
   },
   errorContainer: {
     alignItems: 'center',
@@ -315,65 +359,174 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    fontWeight: '600',
     color: '#EF4444',
+    marginBottom: 16,
     textAlign: 'center',
-    marginVertical: 16,
+    fontWeight: '600',
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  retryText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7C3AED',
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 24,
+  },
+  headerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerText: {
+    flex: 1,
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 8,
+    color: '#111827',
+    marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    textAlign: 'center',
-    opacity: 0.7,
+    color: '#6B7280',
+    lineHeight: 20,
   },
-  qrContainer: {
+  qrSection: {
     alignItems: 'center',
     marginBottom: 24,
   },
   qrWrapper: {
-    padding: 16,
     backgroundColor: 'white',
-    borderRadius: 16,
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  qrInfo: {
+    alignItems: 'center',
+  },
+  qrLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+    marginBottom: 4,
   },
   qrCodeText: {
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 12,
-    opacity: 0.7,
+    fontSize: 11,
     fontFamily: 'monospace',
+    color: '#374151',
+    textAlign: 'center',
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
   instructions: {
     marginBottom: 24,
   },
+  instructionsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  instructionList: {
+    gap: 8,
+  },
   instructionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-    gap: 12,
+  },
+  instructionIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   instructionText: {
     fontSize: 14,
+    color: '#374151',
     flex: 1,
   },
-  actions: {
+  primaryActions: {
     flexDirection: 'row',
     gap: 12,
+    marginBottom: 16,
   },
   actionButton: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  primaryButton: {
+    backgroundColor: '#7C3AED',
+  },
+  secondaryButton: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#7C3AED',
+  },
+  primaryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'white',
+  },
+  secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7C3AED',
+  },
+  secondaryActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  secondaryActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#7C3AED',
+  },
+  secondaryActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7C3AED',
   },
 });
