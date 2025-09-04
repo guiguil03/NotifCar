@@ -16,28 +16,29 @@ export default function TabLayout() {
     <AuthGuard>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].primary,
-          tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].neutral,
+          tabBarActiveTintColor: '#FFFFFF', // Blanc pour contraster avec le violet
+          tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].accent,
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,
           tabBarStyle: Platform.select({
             ios: {
               position: 'absolute',
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backgroundColor: 'rgba(139, 92, 246, 0.95)', // Violet avec transparence
               borderTopWidth: 0,
               elevation: 0,
-              shadowOpacity: 0.1,
-              shadowRadius: 10,
+              shadowOpacity: 0.3,
+              shadowRadius: 15,
               shadowOffset: { width: 0, height: -5 },
+              shadowColor: Colors[colorScheme ?? 'light'].primary,
               height: 90,
               paddingBottom: 30,
               paddingTop: 10,
             },
             default: {
-              backgroundColor: Colors[colorScheme ?? 'light'].card,
+              backgroundColor: Colors[colorScheme ?? 'light'].primary,
               borderTopWidth: 1,
-              borderTopColor: Colors[colorScheme ?? 'light'].border,
+              borderTopColor: Colors[colorScheme ?? 'light'].primaryDark,
               height: 70,
               paddingBottom: 10,
               paddingTop: 10,
@@ -86,13 +87,18 @@ export default function TabLayout() {
                     position: 'absolute',
                     top: -2,
                     right: -2,
-                    backgroundColor: '#F97316',
+                    backgroundColor: Colors[colorScheme ?? 'light'].alert,
                     borderRadius: 8,
                     minWidth: 16,
                     height: 16,
                     alignItems: 'center',
                     justifyContent: 'center',
                     paddingHorizontal: 4,
+                    shadowColor: Colors[colorScheme ?? 'light'].alert,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 4,
+                    elevation: 3,
                   }}
                 >
                   <View style={{ width: 6, height: 6, backgroundColor: 'white', borderRadius: 3 }} />

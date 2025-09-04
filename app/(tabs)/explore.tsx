@@ -2,9 +2,9 @@ import { ThemedText } from '@/components/ThemedText';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useRef, useEffect } from 'react';
-import { Alert, ScrollView, StyleSheet, TouchableOpacity, View, Animated, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef } from 'react';
+import { Alert, Animated, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();

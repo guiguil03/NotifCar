@@ -1,10 +1,12 @@
 import { ThemedText } from '@/components/ThemedText';
+import { VioletButton } from '@/components/ui/VioletButton';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { QRCodeService } from '@/lib/qrCodeService';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, TouchableOpacity, View, Animated, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useState } from 'react';
+import { Alert, Animated, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -12,7 +14,11 @@ export default function ScanScreen() {
   const [flashOn, setFlashOn] = useState(false);
   
   const primaryColor = useThemeColor({}, 'primary');
-  const secondaryColor = useThemeColor({}, 'secondary');
+  // const secondaryColor = useThemeColor({}, 'secondary');
+  const gradientStart = useThemeColor({}, 'gradientStart');
+  const gradientEnd = useThemeColor({}, 'gradientEnd');
+  // const gradientLight = useThemeColor({}, 'gradientLight');
+  const alertColor = useThemeColor({}, 'alert');
 
   // Animations
   const fadeAnim = useState(new Animated.Value(0))[0];
@@ -56,19 +62,20 @@ export default function ScanScreen() {
     pulseAnimation.start();
 
     return () => pulseAnimation.stop();
-  }, [permission, requestPermission]);
+  }, [permission, requestPermission, fadeAnim, slideAnim, pulseAnim]);
 
   const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
     if (scanned) return;
     
     setScanned(true);
     
-    // Simulation d'un scan de QR code Notifcar
-    if (data.startsWith('notifcar:')) {
-      const vehicleId = data.replace('notifcar:', '');
+    // Validation du QR code avec le service
+    const validation = QRCodeService.validateQRCode(data);
+    
+    if (validation.isValid && validation.vehicleId && validation.ownerId) {
       Alert.alert(
-        'QR Code détecté !',
-        `Véhicule ID: ${vehicleId}\n\nQue souhaitez-vous faire ?`,
+        'QR Code NotifCar détecté !',
+        `Véhicule ID: ${validation.vehicleId}\nPropriétaire: ${validation.ownerId}\n\nQue souhaitez-vous faire ?`,
         [
           {
             text: 'Annuler',
@@ -78,8 +85,16 @@ export default function ScanScreen() {
           {
             text: 'Notifier',
             onPress: () => {
-              Alert.alert('Notification', 'Écran de notification à implémenter');
-              setScanned(false);
+              Alert.alert(
+                'Notification envoyée !',
+                'Le propriétaire du véhicule a été notifié de votre message.',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => setScanned(false),
+                  },
+                ]
+              );
             },
           },
         ]
@@ -87,7 +102,7 @@ export default function ScanScreen() {
     } else {
       Alert.alert(
         'QR Code invalide',
-        'Ce QR code n&apos;est pas un code Notifcar valide.',
+        'Ce QR code n\'est pas un code NotifCar valide.\n\nAssurez-vous de scanner un QR code généré par l\'application NotifCar.',
         [
           {
             text: 'OK',
@@ -101,9 +116,9 @@ export default function ScanScreen() {
   if (!permission) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
+        <StatusBar barStyle="light-content" backgroundColor={gradientStart} />
         <LinearGradient
-          colors={['#1E3A8A', '#3B82F6']}
+          colors={[gradientStart, gradientEnd]}
           style={styles.loadingContainer}
         >
           <View style={styles.loadingContent}>
@@ -130,9 +145,9 @@ export default function ScanScreen() {
   if (!permission.granted) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
+        <StatusBar barStyle="light-content" backgroundColor={gradientStart} />
         <LinearGradient
-          colors={['#1E3A8A', '#3B82F6']}
+          colors={[gradientStart, gradientEnd]}
           style={styles.permissionContainer}
         >
           <Animated.View
@@ -149,7 +164,7 @@ export default function ScanScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.permissionIconGradient}
               >
-                <Ionicons name="camera-outline" size={40} color="#1E3A8A" />
+                <Ionicons name="camera-outline" size={40} color={gradientStart} />
               </LinearGradient>
             </View>
             
@@ -160,20 +175,13 @@ export default function ScanScreen() {
               Notifcar a besoin d&apos;accéder à votre caméra pour scanner les QR codes des véhicules.
             </ThemedText>
             
-            <TouchableOpacity
-              style={styles.permissionButton}
+            <VioletButton
+              title="Autoriser la caméra"
               onPress={requestPermission}
-            >
-              <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC']}
-                style={styles.permissionButtonGradient}
-              >
-                <Ionicons name="camera" size={20} color="#1E3A8A" />
-                <ThemedText style={styles.permissionButtonText}>
-                  Autoriser la caméra
-                </ThemedText>
-              </LinearGradient>
-            </TouchableOpacity>
+              variant="outline"
+              size="large"
+              style={styles.permissionButton}
+            />
           </Animated.View>
         </LinearGradient>
       </View>
@@ -225,7 +233,7 @@ export default function ScanScreen() {
                 onPress={() => setFlashOn(!flashOn)}
               >
                 <LinearGradient
-                  colors={flashOn ? ['#F97316', '#FB923C'] : ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
+                  colors={flashOn ? [alertColor, '#FB923C'] : ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
                   style={styles.flashButtonGradient}
                 >
                   <Ionicons 
@@ -254,10 +262,10 @@ export default function ScanScreen() {
                 style={styles.scanFrameGradient}
               >
                 <View style={styles.cornerContainer}>
-                  <View style={[styles.corner, styles.topLeft, { borderColor: '#F97316' }]} />
-                  <View style={[styles.corner, styles.topRight, { borderColor: '#F97316' }]} />
-                  <View style={[styles.corner, styles.bottomLeft, { borderColor: '#F97316' }]} />
-                  <View style={[styles.corner, styles.bottomRight, { borderColor: '#F97316' }]} />
+                  <View style={[styles.corner, styles.topLeft, { borderColor: alertColor }]} />
+                  <View style={[styles.corner, styles.topRight, { borderColor: alertColor }]} />
+                  <View style={[styles.corner, styles.bottomLeft, { borderColor: alertColor }]} />
+                  <View style={[styles.corner, styles.bottomRight, { borderColor: alertColor }]} />
                 </View>
               </LinearGradient>
             </Animated.View>
@@ -557,24 +565,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
   },
   permissionButton: {
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  permissionButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 16,
-    gap: 12,
-  },
-  permissionButtonText: {
-    color: '#1E3A8A',
-    fontSize: 18,
-    fontWeight: '700',
+    marginTop: 20,
   },
 });

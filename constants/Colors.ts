@@ -1,17 +1,23 @@
 /**
  * Couleurs Notifcar - Design System
- * Bleu (sécurité), Orange (alerte), Gris (neutre)
+ * Dégradé de violet (élégance), Orange (alerte), Gris (neutre)
  * "Votre véhicule vous parle, écoutez-le"
  */
 
-// Couleurs principales Notifcar
-const notifcarBlue = '#2563EB';      // Bleu sécurité
-const notifcarOrange = '#F97316';    // Orange alerte
-const notifcarGray = '#6B7280';      // Gris neutre
-const notifcarLightGray = '#F3F4F6'; // Gris clair
-const notifcarDarkGray = '#374151';  // Gris foncé
+// Palette de violets - Dégradé principal (nouveau test)
+const violetPrimary = '#7C3AED';      // Violet principal plus foncé
+const violetSecondary = '#8B5CF6';    // Violet secondaire
+const violetLight = '#C4B5FD';        // Violet clair
+const violetDark = '#5B21B6';         // Violet foncé plus profond
+const violetAccent = '#E9D5FF';       // Violet accent plus doux
 
-const tintColorLight = notifcarBlue;
+// Couleurs d'accent
+const notifcarOrange = '#F97316';     // Orange alerte
+const notifcarGray = '#6B7280';       // Gris neutre
+const notifcarLightGray = '#F3F4F6';  // Gris clair
+const notifcarDarkGray = '#374151';   // Gris foncé
+
+const tintColorLight = violetPrimary;
 const tintColorDark = '#fff';
 
 export const Colors = {
@@ -22,9 +28,13 @@ export const Colors = {
     icon: notifcarGray,
     tabIconDefault: notifcarGray,
     tabIconSelected: tintColorLight,
-    // Couleurs Notifcar
-    primary: notifcarBlue,
-    secondary: notifcarOrange,
+    // Couleurs Notifcar - Palette violet
+    primary: violetPrimary,
+    primaryLight: violetLight,
+    primaryDark: violetDark,
+    secondary: violetSecondary,
+    accent: violetAccent,
+    alert: notifcarOrange,
     neutral: notifcarGray,
     lightNeutral: notifcarLightGray,
     darkNeutral: notifcarDarkGray,
@@ -33,6 +43,11 @@ export const Colors = {
     error: '#EF4444',
     card: '#fff',
     border: '#E5E7EB',
+    // Dégradés
+    gradientStart: violetPrimary,
+    gradientEnd: violetSecondary,
+    gradientLight: violetLight,
+    gradientAccent: violetAccent,
   },
   dark: {
     text: '#ECEDEE',
@@ -41,9 +56,13 @@ export const Colors = {
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
-    // Couleurs Notifcar (mode sombre)
-    primary: '#3B82F6',
-    secondary: '#FB923C',
+    // Couleurs Notifcar - Palette violet (mode sombre)
+    primary: violetSecondary,
+    primaryLight: violetPrimary,
+    primaryDark: violetDark,
+    secondary: violetLight,
+    accent: violetAccent,
+    alert: '#FB923C',
     neutral: '#9CA3AF',
     lightNeutral: '#374151',
     darkNeutral: '#1F2937',
@@ -52,5 +71,10 @@ export const Colors = {
     error: '#F87171',
     card: '#1F2937',
     border: '#374151',
+    // Dégradés
+    gradientStart: violetDark,
+    gradientEnd: violetPrimary,
+    gradientLight: violetSecondary,
+    gradientAccent: violetLight,
   },
 };

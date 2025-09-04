@@ -6,6 +6,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Animated, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
+// import { VioletCard } from '@/components/ui/VioletCard';
+// import { VioletButton } from '@/components/ui/VioletButton';
 
 // const { width, height } = Dimensions.get('window');
 
@@ -14,6 +16,10 @@ export default function HomeScreen() {
   const primaryColor = useThemeColor({}, 'primary');
   const secondaryColor = useThemeColor({}, 'secondary');
   const successColor = useThemeColor({}, 'success');
+  const gradientStart = useThemeColor({}, 'gradientStart');
+  const gradientEnd = useThemeColor({}, 'gradientEnd');
+  const gradientLight = useThemeColor({}, 'gradientLight');
+  // const gradientAccent = useThemeColor({}, 'gradientAccent');
   // const warningColor = useThemeColor({}, 'warning');
 
   // Animations
@@ -85,11 +91,11 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
+      <StatusBar barStyle="light-content" backgroundColor={gradientStart} />
       
-      {/* Header avec gradient */}
+      {/* Header avec gradient violet */}
       <LinearGradient
-        colors={['#1E3A8A', '#3B82F6', '#60A5FA']}
+        colors={[gradientStart, gradientEnd, gradientLight]}
         style={styles.headerGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -146,7 +152,7 @@ export default function HomeScreen() {
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={['#1E3A8A', '#3B82F6']}
+              colors={[gradientStart, gradientEnd]}
               style={styles.mainActionGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -332,7 +338,7 @@ export default function HomeScreen() {
           <View style={styles.guideSteps}>
             <View style={styles.guideStep}>
               <LinearGradient
-                colors={[primaryColor, '#3B82F6']}
+                colors={[gradientStart, gradientEnd]}
                 style={styles.stepIndicator}
               >
                 <ThemedText style={styles.stepNumber}>1</ThemedText>
@@ -347,7 +353,7 @@ export default function HomeScreen() {
 
             <View style={styles.guideStep}>
               <LinearGradient
-                colors={[primaryColor, '#3B82F6']}
+                colors={[gradientStart, gradientEnd]}
                 style={styles.stepIndicator}
               >
                 <ThemedText style={styles.stepNumber}>2</ThemedText>
@@ -362,7 +368,7 @@ export default function HomeScreen() {
 
             <View style={styles.guideStep}>
               <LinearGradient
-                colors={[primaryColor, '#3B82F6']}
+                colors={[gradientStart, gradientEnd]}
                 style={styles.stepIndicator}
               >
                 <ThemedText style={styles.stepNumber}>3</ThemedText>
@@ -445,7 +451,7 @@ const styles = StyleSheet.create({
   },
   mainActionButton: {
     borderRadius: 24,
-    shadowColor: '#1E3A8A',
+    shadowColor: '#8B5CF6',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
@@ -628,7 +634,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#1E3A8A',
+    shadowColor: '#8B5CF6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
