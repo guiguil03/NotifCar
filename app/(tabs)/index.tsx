@@ -4,30 +4,31 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useEffect, useRef } from 'react';
-import { Animated, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
-// import { VioletCard } from '@/components/ui/VioletCard';
-// import { VioletButton } from '@/components/ui/VioletButton';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Dimensions, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-// const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
   const primaryColor = useThemeColor({}, 'primary');
   const secondaryColor = useThemeColor({}, 'secondary');
   const successColor = useThemeColor({}, 'success');
   const gradientStart = useThemeColor({}, 'gradientStart');
   const gradientEnd = useThemeColor({}, 'gradientEnd');
   const gradientLight = useThemeColor({}, 'gradientLight');
-  // const gradientAccent = useThemeColor({}, 'gradientAccent');
-  // const warningColor = useThemeColor({}, 'warning');
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const headerSlideAnim = useRef(new Animated.Value(-30)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   const cardAnimations = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
     new Animated.Value(0),
     new Animated.Value(0),
     new Animated.Value(0),
@@ -35,40 +36,67 @@ export default function HomeScreen() {
   ]).current;
 
   useEffect(() => {
+    // Mise à jour de l'heure
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
     // Animation d'entrée principale
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 1000,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 800,
+        duration: 1000,
         useNativeDriver: true,
       }),
       Animated.timing(scaleAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 1000,
         useNativeDriver: true,
       }),
       Animated.timing(headerSlideAnim, {
         toValue: 0,
-        duration: 600,
+        duration: 800,
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Animation de pulsation pour le bouton principal
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulseAnimation.start();
 
     // Animations en cascade pour les cartes
     cardAnimations.forEach((anim, index) => {
       Animated.timing(anim, {
         toValue: 1,
-        duration: 600,
-        delay: 200 + (index * 100),
+        duration: 800,
+        delay: 300 + (index * 150),
         useNativeDriver: true,
       }).start();
     });
-  }, [fadeAnim, slideAnim, scaleAnim, headerSlideAnim, cardAnimations]);
+
+    return () => {
+      clearInterval(timer);
+      pulseAnimation.stop();
+    };
+  }, [fadeAnim, slideAnim, scaleAnim, headerSlideAnim, cardAnimations, pulseAnim]);
 
   const handleScanQR = () => {
     router.push('/(tabs)/scan');
@@ -82,18 +110,38 @@ export default function HomeScreen() {
     router.push('/(tabs)/notifications');
   };
 
+  const handleProfile = () => {
+    router.push('/(tabs)/explore');
+  };
+
   const getGreeting = () => {
-    const hour = new Date().getHours();
+    const hour = currentTime.getHours();
     if (hour < 12) return 'Bonjour';
     if (hour < 18) return 'Bon après-midi';
     return 'Bonsoir';
   };
 
+  const getTimeString = () => {
+    return currentTime.toLocaleTimeString('fr-FR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const getDateString = () => {
+    return currentTime.toLocaleDateString('fr-FR', { 
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={gradientStart} />
+      <StatusBar barStyle="light-content" backgroundColor="#1E1B4B" />
       
-      {/* Header avec gradient violet */}
+      {/* Header avec gradient violet moderne */}
       <LinearGradient
         colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
         style={styles.headerGradient}
@@ -109,24 +157,38 @@ export default function HomeScreen() {
             }
           ]}
         >
-          <View style={styles.headerContent}>
+          <View style={styles.headerTop}>
             <View style={styles.logoContainer}>
               <LinearGradient
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.logoGradient}
               >
-                <Ionicons name="car-sport" size={28} color="#1E3A8A" />
+                <Ionicons name="car-sport" size={32} color="#7C3AED" />
               </LinearGradient>
             </View>
             
-            <View style={styles.welcomeSection}>
-              <ThemedText style={styles.greetingText}>
-                {getGreeting()}{user?.user_metadata?.full_name ? ` ${user.user_metadata.full_name.split(' ')[0]}` : ''} !
-              </ThemedText>
-              <ThemedText style={styles.subtitleText}>
-                Votre sécurité automobile en un clic
-              </ThemedText>
-            </View>
+            <TouchableOpacity 
+              style={styles.profileButton}
+              onPress={handleProfile}
+            >
+              <LinearGradient
+                colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+                style={styles.profileButtonGradient}
+              >
+                <Ionicons name="person" size={20} color="white" />
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.welcomeSection}>
+            <ThemedText style={styles.greetingText}>
+              {getGreeting()}{user?.user_metadata?.full_name ? ` ${user.user_metadata.full_name.split(' ')[0]}` : ''} !
+            </ThemedText>
+            <ThemedText style={styles.timeText}>{getTimeString()}</ThemedText>
+            <ThemedText style={styles.dateText}>{getDateString()}</ThemedText>
+            <ThemedText style={styles.subtitleText}>
+              Votre sécurité automobile en un clic
+            </ThemedText>
           </View>
         </Animated.View>
       </LinearGradient>
@@ -136,13 +198,16 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Action principale avec design premium */}
+        {/* Action principale avec animation de pulsation */}
         <Animated.View 
           style={[
             styles.mainActionContainer,
             {
               opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }, { scale: scaleAnim }]
+              transform: [
+                { translateY: slideAnim }, 
+                { scale: Animated.multiply(scaleAnim, pulseAnim) }
+              ]
             }
           ]}
         >
@@ -152,14 +217,14 @@ export default function HomeScreen() {
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={[gradientStart, gradientEnd]}
+              colors={['#7C3AED', '#5B21B6', '#4C1D95']}
               style={styles.mainActionGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <View style={styles.mainActionContent}>
                 <View style={styles.mainActionIcon}>
-                  <Ionicons name="qr-code" size={32} color="white" />
+                  <Ionicons name="qr-code" size={36} color="white" />
                 </View>
                 <View style={styles.mainActionTextContainer}>
                   <ThemedText style={styles.mainActionTitle}>Scanner QR Code</ThemedText>
@@ -168,7 +233,7 @@ export default function HomeScreen() {
                   </ThemedText>
                 </View>
                 <View style={styles.arrowContainer}>
-                  <Ionicons name="arrow-forward" size={24} color="rgba(255,255,255,0.8)" />
+                  <Ionicons name="arrow-forward" size={24} color="rgba(255,255,255,0.9)" />
                 </View>
               </View>
             </LinearGradient>
@@ -204,8 +269,8 @@ export default function HomeScreen() {
                   style={styles.quickActionGradient}
                 >
                   <View style={styles.quickActionHeader}>
-                    <View style={[styles.quickActionIcon, { backgroundColor: primaryColor }]}>
-                      <Ionicons name="car" size={20} color="white" />
+                    <View style={[styles.quickActionIcon, { backgroundColor: '#7C3AED' }]}>
+                      <Ionicons name="car" size={24} color="white" />
                     </View>
                     <View style={styles.quickActionArrow}>
                       <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
@@ -241,8 +306,8 @@ export default function HomeScreen() {
                   style={styles.quickActionGradient}
                 >
                   <View style={styles.quickActionHeader}>
-                    <View style={[styles.quickActionIcon, { backgroundColor: secondaryColor }]}>
-                      <Ionicons name="notifications" size={20} color="white" />
+                    <View style={[styles.quickActionIcon, { backgroundColor: '#F59E0B' }]}>
+                      <Ionicons name="notifications" size={24} color="white" />
                     </View>
                     <View style={styles.quickActionArrow}>
                       <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
@@ -250,7 +315,7 @@ export default function HomeScreen() {
                   </View>
                   <ThemedText style={styles.quickActionTitle}>Notifications</ThemedText>
                   <View style={styles.notificationBadge}>
-                    <View style={[styles.notificationDot, { backgroundColor: secondaryColor }]} />
+                    <View style={[styles.notificationDot, { backgroundColor: '#F59E0B' }]} />
                     <ThemedText style={styles.quickActionCount}>3 nouvelles</ThemedText>
                   </View>
                 </LinearGradient>
@@ -282,10 +347,10 @@ export default function HomeScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.statGradient}
               >
-                <View style={[styles.statIcon, { backgroundColor: primaryColor }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#7C3AED' }]}>
                   <Ionicons name="car" size={20} color="white" />
                 </View>
-                <ThemedText style={[styles.statNumber, { color: primaryColor }]}>1</ThemedText>
+                <ThemedText style={[styles.statNumber, { color: '#7C3AED' }]}>1</ThemedText>
                 <ThemedText style={styles.statLabel}>Véhicule</ThemedText>
               </LinearGradient>
             </View>
@@ -295,10 +360,10 @@ export default function HomeScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.statGradient}
               >
-                <View style={[styles.statIcon, { backgroundColor: secondaryColor }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#F59E0B' }]}>
                   <Ionicons name="alert-circle" size={20} color="white" />
                 </View>
-                <ThemedText style={[styles.statNumber, { color: secondaryColor }]}>3</ThemedText>
+                <ThemedText style={[styles.statNumber, { color: '#F59E0B' }]}>3</ThemedText>
                 <ThemedText style={styles.statLabel}>Alertes</ThemedText>
               </LinearGradient>
             </View>
@@ -308,20 +373,20 @@ export default function HomeScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.statGradient}
               >
-                <View style={[styles.statIcon, { backgroundColor: successColor }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#10B981' }]}>
                   <Ionicons name="shield-checkmark" size={20} color="white" />
                 </View>
-                <ThemedText style={[styles.statNumber, { color: successColor }]}>100%</ThemedText>
+                <ThemedText style={[styles.statNumber, { color: '#10B981' }]}>100%</ThemedText>
                 <ThemedText style={styles.statLabel}>Sécurisé</ThemedText>
               </LinearGradient>
             </View>
           </View>
         </Animated.View>
 
-        {/* Guide d'utilisation avec design moderne */}
+        {/* Section fonctionnalités */}
         <Animated.View 
           style={[
-            styles.guideContainer,
+            styles.featuresContainer,
             {
               opacity: cardAnimations[3],
               transform: [{
@@ -333,55 +398,63 @@ export default function HomeScreen() {
             }
           ]}
         >
-          <ThemedText style={styles.sectionTitle}>Comment ça marche ?</ThemedText>
+          <ThemedText style={styles.sectionTitle}>Fonctionnalités</ThemedText>
           
-          <View style={styles.guideSteps}>
-            <View style={styles.guideStep}>
+          <View style={styles.featuresGrid}>
+            <View style={styles.featureCard}>
               <LinearGradient
-                colors={[gradientStart, gradientEnd]}
-                style={styles.stepIndicator}
+                colors={['#E9D5FF', '#DDD6FE']}
+                style={styles.featureGradient}
               >
-                <ThemedText style={styles.stepNumber}>1</ThemedText>
+                <Ionicons name="qr-code-outline" size={32} color="#7C3AED" />
+                <ThemedText style={styles.featureTitle}>Scan QR</ThemedText>
+                <ThemedText style={styles.featureDescription}>
+                  Scanner et notifier instantanément
+                </ThemedText>
               </LinearGradient>
-              <View style={styles.stepContent}>
-                <ThemedText style={styles.stepTitle}>Enregistrez</ThemedText>
-                <ThemedText style={styles.stepDescription}>
-                  Ajoutez vos véhicules dans l&apos;application
-        </ThemedText>
-              </View>
             </View>
-
-            <View style={styles.guideStep}>
+            
+            <View style={styles.featureCard}>
               <LinearGradient
-                colors={[gradientStart, gradientEnd]}
-                style={styles.stepIndicator}
+                colors={['#FEF3C7', '#FDE68A']}
+                style={styles.featureGradient}
               >
-                <ThemedText style={styles.stepNumber}>2</ThemedText>
+                <Ionicons name="notifications-outline" size={32} color="#F59E0B" />
+                <ThemedText style={styles.featureTitle}>Alertes</ThemedText>
+                <ThemedText style={styles.featureDescription}>
+                  Recevez des notifications en temps réel
+                </ThemedText>
               </LinearGradient>
-              <View style={styles.stepContent}>
-                <ThemedText style={styles.stepTitle}>Collez</ThemedText>
-                <ThemedText style={styles.stepDescription}>
-                  QR code sur le pare-brise de votre véhicule
-        </ThemedText>
-              </View>
             </View>
-
-            <View style={styles.guideStep}>
+            
+            <View style={styles.featureCard}>
               <LinearGradient
-                colors={[gradientStart, gradientEnd]}
-                style={styles.stepIndicator}
+                colors={['#D1FAE5', '#A7F3D0']}
+                style={styles.featureGradient}
               >
-                <ThemedText style={styles.stepNumber}>3</ThemedText>
+                <Ionicons name="shield-outline" size={32} color="#10B981" />
+                <ThemedText style={styles.featureTitle}>Sécurité</ThemedText>
+                <ThemedText style={styles.featureDescription}>
+                  Protection maximale de vos données
+                </ThemedText>
               </LinearGradient>
-              <View style={styles.stepContent}>
-                <ThemedText style={styles.stepTitle}>Recevez</ThemedText>
-                <ThemedText style={styles.stepDescription}>
-                  Notifications instantanées en cas d&apos;incident
-        </ThemedText>
-              </View>
+            </View>
+            
+            <View style={styles.featureCard}>
+              <LinearGradient
+                colors={['#DBEAFE', '#BFDBFE']}
+                style={styles.featureGradient}
+              >
+                <Ionicons name="cloud-outline" size={32} color="#3B82F6" />
+                <ThemedText style={styles.featureTitle}>Cloud</ThemedText>
+                <ThemedText style={styles.featureDescription}>
+                  Synchronisation automatique
+                </ThemedText>
+              </LinearGradient>
             </View>
           </View>
         </Animated.View>
+
       </ScrollView>
     </View>
   );
@@ -659,5 +732,74 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     lineHeight: 20,
+  },
+  // Nouveaux styles pour les sections modernes
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  profileButton: {
+    borderRadius: 12,
+  },
+  profileButtonGradient: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timeText: {
+    fontSize: 20,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '600',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  dateText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  featuresContainer: {
+    padding: 24,
+  },
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  featureCard: {
+    width: (width - 60) / 2,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  featureGradient: {
+    padding: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+    minHeight: 120,
+    justifyContent: 'center',
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginTop: 12,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  featureDescription: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 16,
   },
 });

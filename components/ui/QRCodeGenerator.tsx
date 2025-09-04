@@ -102,6 +102,65 @@ export function QRCodeGenerator({ vehicleData, onQRGenerated }: QRCodeGeneratorP
     }
   };
 
+  const captureAndShare = async () => {
+    if (!qrCodeRef.current || !qrString) return;
+
+    setIsCapturing(true);
+    try {
+      // Capturer le QR code en image
+      const imageUri = await QRCaptureService.captureQRCode(qrCodeRef, {
+        format: 'png',
+        quality: 1,
+        result: 'tmpfile'
+      });
+
+      // Partager l'image
+      await QRCaptureService.shareQRCode(imageUri, vehicleData.vehicleName, {
+        format: 'png',
+        quality: 1
+      });
+
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de capturer et partager le QR code');
+      console.error('Erreur capture/partage:', error);
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
+  const captureAndSave = async () => {
+    if (!qrCodeRef.current || !qrString) return;
+
+    setIsCapturing(true);
+    try {
+      // Capturer le QR code en image
+      const imageUri = await QRCaptureService.captureQRCode(qrCodeRef, {
+        format: 'png',
+        quality: 1,
+        result: 'tmpfile'
+      });
+
+      // Sauvegarder dans les documents
+      const savedPath = await QRCaptureService.saveQRCodeToDocuments(
+        imageUri, 
+        vehicleData.vehicleName, 
+        'png'
+      );
+
+      Alert.alert(
+        'Succès',
+        `QR code sauvegardé dans les documents : ${savedPath}`,
+        [{ text: 'OK' }]
+      );
+
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de capturer et sauvegarder le QR code');
+      console.error('Erreur capture/sauvegarde:', error);
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
   const downloadQRCode = async () => {
     if (!qrString) return;
 
@@ -223,7 +282,7 @@ export function QRCodeGenerator({ vehicleData, onQRGenerated }: QRCodeGeneratorP
       </View>
 
       {/* QR Code Display */}
-      <View style={styles.qrSection}>
+      <View style={styles.qrSection} ref={qrCodeRef}>
         <View style={styles.qrWrapper}>
           <QRCodeDisplay 
             value={qrString}
@@ -300,10 +359,24 @@ export function QRCodeGenerator({ vehicleData, onQRGenerated }: QRCodeGeneratorP
       <View style={styles.secondaryActions}>
         <TouchableOpacity
           style={styles.secondaryActionButton}
-          onPress={() => shareQRCode()}
+          onPress={captureAndShare}
+          disabled={isCapturing}
         >
           <Ionicons name="share" size={16} color="#7C3AED" />
-          <ThemedText style={styles.secondaryActionText}>Partager</ThemedText>
+          <ThemedText style={styles.secondaryActionText}>
+            {isCapturing ? "Capture..." : "Partager Image"}
+          </ThemedText>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.secondaryActionButton}
+          onPress={captureAndSave}
+          disabled={isCapturing}
+        >
+          <Ionicons name="save" size={16} color="#7C3AED" />
+          <ThemedText style={styles.secondaryActionText}>
+            {isCapturing ? "Capture..." : "Sauvegarder"}
+          </ThemedText>
         </TouchableOpacity>
         
         <TouchableOpacity
@@ -313,7 +386,7 @@ export function QRCodeGenerator({ vehicleData, onQRGenerated }: QRCodeGeneratorP
         >
           <Ionicons name="print" size={16} color="#7C3AED" />
           <ThemedText style={styles.secondaryActionText}>
-            {isPrinting ? "Impression..." : "Imprimer"}
+            {isPrinting ? "Impression..." : "Imprimer PDF"}
           </ThemedText>
         </TouchableOpacity>
       </View>
@@ -509,24 +582,27 @@ const styles = StyleSheet.create({
   },
   secondaryActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
+    flexWrap: 'wrap',
   },
   secondaryActionButton: {
     flex: 1,
+    minWidth: '30%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    gap: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     borderRadius: 8,
     backgroundColor: '#F3F4F6',
     borderWidth: 1,
     borderColor: '#7C3AED',
   },
   secondaryActionText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#7C3AED',
+    textAlign: 'center',
   },
 });
