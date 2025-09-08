@@ -46,6 +46,12 @@ export class ChatService {
   // Créer une nouvelle conversation
   static async createConversation(data: CreateConversationData): Promise<Conversation> {
     try {
+      // S'assurer que reporterId est défini (utilisateur courant)
+      let reporterId = data.reporterId;
+      if (!reporterId) {
+        const { data: authData } = await supabase.auth.getUser();
+        reporterId = authData.user?.id as string;
+      }
       // Valider le QR code et extraire l'ID du propriétaire
       const qrValidation = QRCodeService.validateQRCode(data.vehicleId);
       
@@ -54,18 +60,40 @@ export class ChatService {
       }
 
       // Vérifier qu'on ne crée pas une conversation avec soi-même
-      if (qrValidation.ownerId === data.reporterId) {
+      if (qrValidation.ownerId === reporterId) {
         throw new Error('Vous ne pouvez pas signaler un problème sur votre propre véhicule.');
       }
 
-      // Chercher le véhicule par son QR code pour obtenir les détails
-      const { data: vehicle, error: vehicleError } = await supabase
-        .from('vehicles')
-        .select('id, owner_id, brand, model, license_plate')
-        .eq('qr_code', data.vehicleId)
-        .single();
+      // Chercher le véhicule par son QR code (forme brute puis forme normalisée)
+      const tryFetchVehicle = async (qr: string) => {
+        return supabase
+          .from('vehicles')
+          .select('id, owner_id, brand, model, license_plate')
+          .eq('qr_code', qr)
+          .maybeSingle();
+      };
 
-      if (vehicleError || !vehicle) {
+      // 1) tentative avec la donnée brute
+      let { data: vehicle, error: vehicleError } = await tryFetchVehicle(data.vehicleId);
+
+      // 2) si introuvable, normaliser et réessayer
+      if (!vehicle) {
+        const normalized = `notifcar:${qrValidation.vehicleId}:${qrValidation.ownerId}`;
+        const retry = await tryFetchVehicle(normalized);
+        vehicle = retry.data as any;
+      }
+
+      // 3) si toujours introuvable, recherche par id de véhicule extrait du QR
+      if (!vehicle) {
+        const byId = await supabase
+          .from('vehicles')
+          .select('id, owner_id, brand, model, license_plate, qr_code')
+          .eq('id', qrValidation.vehicleId)
+          .maybeSingle();
+        vehicle = byId.data as any;
+      }
+
+      if (!vehicle) {
         throw new Error('Véhicule non trouvé. Le QR code semble valide mais le véhicule n\'existe plus.');
       }
 
@@ -74,34 +102,44 @@ export class ChatService {
         throw new Error('Erreur de sécurité : le propriétaire du QR code ne correspond pas au véhicule.');
       }
 
-      // Créer la conversation avec le propriétaire du véhicule
+      // Créer la conversation + participants via RPC (bypass RLS correctement)
       const { data: conversation, error } = await supabase
-        .from('conversations')
-        .insert({
-          vehicle_id: vehicle.id,
-          owner_id: qrValidation.ownerId, // L'ID du propriétaire extrait du QR code
-          reporter_id: data.reporterId, // L'utilisateur qui scanne
-          subject: data.subject || 'Problème signalé via QR Code',
+        .rpc('get_or_create_conversation_with_participants_v5', {
+          p_vehicle_id: vehicle.id,
+          p_owner_id: qrValidation.ownerId,
+          p_reporter_id: reporterId,
+          p_subject: data.subject || 'Problème signalé via QR Code',
         })
-        .select(`
-          *,
-          vehicles!inner(brand, model, license_plate)
-        `)
         .single();
 
       if (error) throw error;
 
-      // Ajouter le message initial si fourni
+      // Ajouter le message initial si fourni (via RPC pour bypass RLS)
       if (data.initialMessage) {
-        await this.sendMessage({
-          conversationId: conversation.id,
-          content: data.initialMessage,
-          messageType: 'text',
-          senderId: data.reporterId
-        });
+        const { error: sendErr } = await supabase
+          .rpc('send_message_if_participant', {
+            p_conversation_id: conversation.conv_id ?? conversation.id,
+            p_sender_id: reporterId,
+            p_content: data.initialMessage,
+            p_message_type: 'text'
+          })
+          .single();
+        if (sendErr) throw sendErr;
       }
 
-      return this.mapConversationFromDB(conversation);
+      // Mapper retour v3 -> shape standard conversations
+      // Map retour v5 -> standard conversation
+      const conv = {
+        id: conversation.conv_id,
+        vehicle_id: conversation.conv_vehicle_id,
+        owner_id: conversation.conv_owner_id,
+        reporter_id: conversation.conv_reporter_id,
+        status: conversation.conv_status,
+        subject: conversation.conv_subject,
+        created_at: conversation.conv_created_at,
+        updated_at: conversation.conv_updated_at,
+      } as any;
+      return this.mapConversationFromDB(conv);
     } catch (error) {
       console.error('Erreur création conversation:', error);
       throw new Error('Impossible de créer la conversation');

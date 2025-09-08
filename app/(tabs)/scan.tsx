@@ -4,6 +4,7 @@ import { VioletButton } from '@/components/ui/VioletButton';
 import { useChat } from '@/contexts/ChatContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { QRCodeService } from '@/lib/qrCodeService';
+import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,6 +19,7 @@ export default function ScanScreen() {
   const [scannedVehicleId, setScannedVehicleId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [targetDisplayName, setTargetDisplayName] = useState<string>('propriétaire');
   const [showQRDebugger, setShowQRDebugger] = useState(false);
   
   const { createConversationFromQR } = useChat();
@@ -73,7 +75,7 @@ export default function ScanScreen() {
     return () => pulseAnimation.stop();
   }, [permission, requestPermission, fadeAnim, slideAnim, pulseAnim]);
 
-  const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
+  const handleBarCodeScanned = async ({ type, data }: { type: string; data: string }) => {
     if (scanned) return;
     
     setScanned(true);
@@ -96,6 +98,29 @@ export default function ScanScreen() {
     if (validation.isValid && validation.vehicleId && validation.ownerId) {
       console.log('QR code valide, ouverture du modal');
       setScannedVehicleId(data); // Stocker le QR code complet
+
+      // Récupérer un nom lisible pour le propriétaire
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name, full_name, username, email')
+          .eq('id', validation.ownerId)
+          .maybeSingle();
+        const nameCandidate =
+          (profile?.display_name && String(profile.display_name).trim()) ||
+          (profile?.full_name && String(profile.full_name).trim()) ||
+          (profile?.username && String(profile.username).trim()) ||
+          (profile?.email && String(profile.email).trim());
+
+        if (nameCandidate && nameCandidate.length > 0) {
+          setTargetDisplayName(nameCandidate);
+        } else {
+          setTargetDisplayName(`${validation.ownerId.slice(0, 8)}…`);
+        }
+      } catch {
+        setTargetDisplayName(`${validation.ownerId.slice(0, 8)}…`);
+      }
+
       setShowMessageModal(true);
     } else {
       console.log('QR code invalide, affichage de l\'alerte');
@@ -409,7 +434,7 @@ export default function ScanScreen() {
             <View style={styles.messageInfo}>
               <Ionicons name="car" size={24} color="#7C3AED" />
               <Text style={styles.messageInfoText}>
-                Vous allez envoyer un message au propriétaire de ce véhicule
+                Vous allez envoyer un message à {targetDisplayName}
               </Text>
             </View>
 
