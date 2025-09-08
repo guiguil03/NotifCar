@@ -1,3 +1,4 @@
+import { NotificationService } from './notificationService';
 import { QRCodeService } from './qrCodeService';
 import { supabase } from './supabase';
 
@@ -74,7 +75,7 @@ export class ChatService {
       };
 
       // 1) tentative avec la donnée brute
-      let { data: vehicle, error: vehicleError } = await tryFetchVehicle(data.vehicleId);
+      let { data: vehicle } = await tryFetchVehicle(data.vehicleId);
 
       // 2) si introuvable, normaliser et réessayer
       if (!vehicle) {
@@ -118,7 +119,7 @@ export class ChatService {
       if (data.initialMessage) {
         const { error: sendErr } = await supabase
           .rpc('send_message_if_participant', {
-            p_conversation_id: conversation.conv_id ?? conversation.id,
+            p_conversation_id: (conversation as any).conv_id ?? (conversation as any).id,
             p_sender_id: reporterId,
             p_content: data.initialMessage,
             p_message_type: 'text'
@@ -130,14 +131,14 @@ export class ChatService {
       // Mapper retour v3 -> shape standard conversations
       // Map retour v5 -> standard conversation
       const conv = {
-        id: conversation.conv_id,
-        vehicle_id: conversation.conv_vehicle_id,
-        owner_id: conversation.conv_owner_id,
-        reporter_id: conversation.conv_reporter_id,
-        status: conversation.conv_status,
-        subject: conversation.conv_subject,
-        created_at: conversation.conv_created_at,
-        updated_at: conversation.conv_updated_at,
+        id: (conversation as any).conv_id,
+        vehicle_id: (conversation as any).conv_vehicle_id,
+        owner_id: (conversation as any).conv_owner_id,
+        reporter_id: (conversation as any).conv_reporter_id,
+        status: (conversation as any).conv_status,
+        subject: (conversation as any).conv_subject,
+        created_at: (conversation as any).conv_created_at,
+        updated_at: (conversation as any).conv_updated_at,
       } as any;
       return this.mapConversationFromDB(conv);
     } catch (error) {
@@ -152,14 +153,21 @@ export class ChatService {
       const { data, error } = await supabase
         .rpc('get_user_conversations', { user_uuid: userId });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erreur RPC get_user_conversations:', error);
+        throw error;
+      }
+
+      if (!data) {
+        return [];
+      }
 
       return data.map((conv: any) => ({
         id: conv.conversation_id,
         vehicleId: conv.vehicle_id,
-        ownerId: conv.other_participant_id === conv.other_participant_id ? conv.other_participant_id : conv.other_participant_id,
-        reporterId: conv.other_participant_id,
-        status: conv.status,
+        ownerId: conv.other_participant_id, // L'autre participant est soit owner soit reporter
+        reporterId: conv.other_participant_id, // Même chose ici, on s'occupera de la logique côté UI
+        status: conv.status as 'active' | 'resolved' | 'closed',
         subject: conv.subject,
         createdAt: conv.created_at,
         updatedAt: conv.last_message_at || conv.created_at,
@@ -224,24 +232,87 @@ export class ChatService {
         throw new Error('Utilisateur non authentifié');
       }
 
-      const { data: message, error } = await supabaseClient
-        .from('messages')
-        .insert({
-          conversation_id: data.conversationId,
-          sender_id: senderId,
-          content: data.content,
-          message_type: data.messageType || 'text',
-          metadata: data.metadata,
+      // Utiliser la RPC securisée pour respecter la RLS côté messages
+      const { data: rpcMessage, error } = await supabaseClient
+        .rpc('send_message_if_participant', {
+          p_conversation_id: data.conversationId,
+          p_sender_id: senderId,
+          p_content: data.content,
+          p_message_type: data.messageType || 'text',
         })
-        .select()
         .single();
 
       if (error) throw error;
 
-      return this.mapMessageFromDB(message);
+      // rpcMessage contient des clés msg_*. Convertir vers shape Message
+      const message: Message = {
+        id: rpcMessage.msg_id,
+        conversationId: rpcMessage.msg_conversation_id,
+        senderId: rpcMessage.msg_sender_id,
+        content: rpcMessage.msg_content,
+        messageType: rpcMessage.msg_message_type,
+        metadata: rpcMessage.msg_metadata,
+        isRead: rpcMessage.msg_is_read,
+        createdAt: rpcMessage.msg_created_at,
+      };
+
+      // Envoyer une notification push
+      try {
+        await this.sendNotificationForMessage(message, senderId);
+      } catch (notificationError) {
+        console.error('Erreur envoi notification:', notificationError);
+        // Ne pas faire échouer l'envoi du message si la notification échoue
+      }
+
+      return message;
     } catch (error) {
       console.error('Erreur envoi message:', error);
       throw new Error('Impossible d\'envoyer le message');
+    }
+  }
+
+  // Envoyer une notification pour un nouveau message
+  private static async sendNotificationForMessage(message: Message, senderId: string): Promise<void> {
+    try {
+      // Récupérer les informations de la conversation
+      const { data: conversationData } = await supabase
+        .from('conversations')
+        .select(`
+          id,
+          vehicle_brand,
+          vehicle_model,
+          vehicle_license_plate,
+          conversation_participants!inner(user_id)
+        `)
+        .eq('id', message.conversationId)
+        .single();
+
+      if (!conversationData) return;
+
+      // Trouver l'autre participant
+      const otherParticipant = conversationData.conversation_participants
+        .find((p: any) => p.user_id !== senderId);
+
+      if (!otherParticipant) return;
+
+      // Récupérer le nom de l'expéditeur
+      const { data: senderData } = await supabase
+        .from('auth.users')
+        .select('email')
+        .eq('id', senderId)
+        .single();
+
+      const senderName = senderData?.email || 'Utilisateur';
+
+      // Envoyer la notification
+      await NotificationService.notifyNewMessage(
+        otherParticipant.user_id,
+        senderName,
+        message.content,
+        message.conversationId
+      );
+    } catch (error) {
+      console.error('Erreur envoi notification message:', error);
     }
   }
 

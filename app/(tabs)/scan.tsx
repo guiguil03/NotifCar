@@ -1,15 +1,17 @@
+import UltraSimpleChat from '@/components/chat/UltraSimpleChat';
 import { QRDebugger } from '@/components/dev/QRDebugger';
 import { ThemedText } from '@/components/ThemedText';
 import { VioletButton } from '@/components/ui/VioletButton';
 import { useChat } from '@/contexts/ChatContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { ChatService, Conversation } from '@/lib/chatService';
 import { QRCodeService } from '@/lib/qrCodeService';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
-import { Alert, Animated, Keyboard, Modal, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Alert, Animated, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -21,13 +23,16 @@ export default function ScanScreen() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [targetDisplayName, setTargetDisplayName] = useState<string>('propriétaire');
   const [showQRDebugger, setShowQRDebugger] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [showConversations, setShowConversations] = useState(false);
   
   const { createConversationFromQR } = useChat();
   
   const primaryColor = useThemeColor({}, 'primary');
   // const secondaryColor = useThemeColor({}, 'secondary');
   const gradientStart = useThemeColor({}, 'gradientStart');
-  const gradientEnd = useThemeColor({}, 'gradientEnd');
+  // const gradientEnd = useThemeColor({}, 'gradientEnd');
   // const gradientLight = useThemeColor({}, 'gradientLight');
   const alertColor = useThemeColor({}, 'alert');
 
@@ -40,6 +45,9 @@ export default function ScanScreen() {
     if (!permission?.granted) {
       requestPermission();
     }
+
+    // Charger les conversations
+    loadConversations();
 
     // Animation d'entrée
     Animated.parallel([
@@ -74,6 +82,18 @@ export default function ScanScreen() {
 
     return () => pulseAnimation.stop();
   }, [permission, requestPermission, fadeAnim, slideAnim, pulseAnim]);
+
+  const loadConversations = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.id) {
+        const conversationsData = await ChatService.getUserConversations(user.id);
+        setConversations(conversationsData);
+      }
+    } catch (error) {
+      console.error('Erreur chargement conversations:', error);
+    }
+  };
 
   const handleBarCodeScanned = async ({ type, data }: { type: string; data: string }) => {
     if (scanned) return;
@@ -162,6 +182,7 @@ export default function ScanScreen() {
         );
       }
     } catch (error) {
+      console.error('Erreur envoi message:', error);
       Alert.alert('Erreur', 'Impossible d\'envoyer le message. Veuillez réessayer.');
     } finally {
       setSendingMessage(false);
@@ -174,6 +195,32 @@ export default function ScanScreen() {
     setScannedVehicleId(null);
     setScanned(false);
   };
+
+  const openConversation = (conversation: Conversation) => {
+    setSelectedConversation(conversation);
+  };
+
+  const closeConversation = () => {
+    setSelectedConversation(null);
+    loadConversations(); // Recharger les conversations
+  };
+
+  const toggleConversations = () => {
+    setShowConversations(!showConversations);
+    if (!showConversations) {
+      loadConversations();
+    }
+  };
+
+  // Si une conversation est sélectionnée, afficher le chat
+  if (selectedConversation) {
+    return (
+      <UltraSimpleChat
+        conversation={selectedConversation}
+        onBack={closeConversation}
+      />
+    );
+  }
 
   if (!permission) {
     return (
@@ -403,6 +450,32 @@ export default function ScanScreen() {
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
+
+            {/* Bouton Conversations */}
+            <Animated.View
+              style={[
+                styles.debugButtonContainer,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }]
+                }
+              ]}
+            >
+              <TouchableOpacity
+                onPress={toggleConversations}
+                style={styles.debugButton}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#8B5CF6', '#A855F7', '#C084FC']}
+                  style={styles.debugButtonGradient}
+                >
+                  <Ionicons name="chatbubbles" size={32} color="white" />
+                  <Text style={styles.debugButtonMainText}>💬 MESSAGES</Text>
+                  <Text style={styles.debugButtonSubText}>Voir les conversations ({conversations.length})</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
           </LinearGradient>
         </View>
       </CameraView>
@@ -415,8 +488,12 @@ export default function ScanScreen() {
       presentationStyle="pageSheet"
       onRequestClose={handleCancelMessage}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.modalContainer}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalContainer}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalContentWrapper}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={handleCancelMessage} style={styles.modalCloseButton}>
               <Ionicons name="close" size={24} color="#6B7280" />
@@ -443,11 +520,13 @@ export default function ScanScreen() {
               value={messageText}
               onChangeText={setMessageText}
               placeholder="Décrivez le problème ou laissez un message..."
+              placeholderTextColor="#999"
               multiline
               maxLength={500}
               textAlignVertical="top"
               returnKeyType="default"
               blurOnSubmit={false}
+              autoFocus={true}
             />
 
             <View style={styles.characterCount}>
@@ -480,8 +559,9 @@ export default function ScanScreen() {
               )}
             </TouchableOpacity>
           </View>
-        </View>
-      </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </Modal>
 
     {/* Modal de débogage QR */}
@@ -500,6 +580,66 @@ export default function ScanScreen() {
           <View style={{ width: 24 }} />
         </View>
         <QRDebugger />
+      </View>
+    </Modal>
+
+    {/* Modal Conversations */}
+    <Modal
+      visible={showConversations}
+      animationType="slide"
+      presentationStyle="pageSheet"
+    >
+      <View style={styles.conversationsModalContainer}>
+        <View style={styles.conversationsHeader}>
+          <TouchableOpacity onPress={toggleConversations} style={styles.conversationsCloseButton}>
+            <Ionicons name="close" size={24} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.conversationsTitle}>Mes Conversations</Text>
+          <View style={styles.conversationsPlaceholder} />
+        </View>
+
+        {conversations.length === 0 ? (
+          <View style={styles.emptyConversationsContainer}>
+            <Ionicons name="chatbubbles-outline" size={80} color="#ccc" />
+            <Text style={styles.emptyConversationsTitle}>Aucune conversation</Text>
+            <Text style={styles.emptyConversationsSubtitle}>
+              Scannez un QR code pour commencer une conversation
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={conversations}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.conversationItem}
+                onPress={() => {
+                  setShowConversations(false);
+                  openConversation(item);
+                }}
+              >
+                <View style={styles.conversationContent}>
+                  <Text style={styles.conversationVehicleName}>
+                    {`${item.vehicleBrand ? item.vehicleBrand : 'Véhicule'} ${item.vehicleModel ? item.vehicleModel : ''}`.trim()}
+                  </Text>
+                  <Text style={styles.conversationLicensePlate}>
+                    {item.vehicleLicensePlate ? item.vehicleLicensePlate : 'Plaque inconnue'}
+                  </Text>
+                  <Text style={styles.conversationParticipant}>
+                    avec {item.otherParticipantEmail ? item.otherParticipantEmail : (item.otherParticipantId ? `${item.otherParticipantId.slice(0, 8)}...` : 'Utilisateur')}
+                  </Text>
+                  {item.lastMessageContent && (
+                    <Text style={styles.conversationLastMessage} numberOfLines={2}>
+                      {item.lastMessageContent}
+                    </Text>
+                  )}
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+              </TouchableOpacity>
+            )}
+            contentContainerStyle={styles.conversationsList}
+          />
+        )}
       </View>
     </Modal>
     </>
@@ -747,6 +887,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
+  modalContentWrapper: {
+    flex: 1,
+  },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -793,12 +936,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
-    fontSize: 16,
+    fontSize: 18,
     color: '#1F2937',
     minHeight: 120,
     textAlignVertical: 'top',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderWidth: 3,
+    borderColor: '#8B5CF6',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   characterCount: {
     alignItems: 'flex-end',
@@ -864,6 +1012,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'white',
   },
+  debugButtonContainer: {
+    marginHorizontal: 20,
+    marginVertical: 10,
+  },
   debugButton: {
     borderWidth: 2,
     borderColor: '#FF4500',
@@ -920,5 +1072,90 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
     fontStyle: 'italic',
+  },
+  // Styles pour les conversations
+  conversationsModalContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  conversationsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingTop: 50,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  conversationsCloseButton: {
+    padding: 8,
+  },
+  conversationsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  conversationsPlaceholder: {
+    width: 40,
+  },
+  emptyConversationsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyConversationsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+  },
+  emptyConversationsSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  conversationsList: {
+    padding: 20,
+  },
+  conversationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  conversationContent: {
+    flex: 1,
+  },
+  conversationVehicleName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  conversationLicensePlate: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 2,
+  },
+  conversationParticipant: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  conversationLastMessage: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 4,
   },
 });
