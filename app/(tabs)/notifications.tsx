@@ -1,54 +1,19 @@
 import { ThemedText } from '@/components/ThemedText';
+import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { Signalization, SignalizationService } from '@/lib/signalizationService';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
-
-interface Notification {
-  id: string;
-  type: 'warning' | 'info' | 'urgent';
-  title: string;
-  message: string;
-  vehicle: string;
-  location?: string;
-  timestamp: Date;
-  isRead: boolean;
-}
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, Animated, RefreshControl, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function NotificationsScreen() {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    // Données de démonstration
-    {
-      id: '1',
-      type: 'urgent',
-      title: 'Incident détecté',
-      message: 'Votre véhicule a été heurté par un autre véhicule',
-      vehicle: 'Renault Clio - AB-123-CD',
-      location: 'Rue de la Paix, Paris',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-      isRead: false,
-    },
-    {
-      id: '2',
-      type: 'warning',
-      title: 'Stationnement irrégulier',
-      message: 'Votre véhicule gêne la circulation',
-      vehicle: 'Renault Clio - AB-123-CD',
-      location: 'Boulevard Saint-Germain, Paris',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-      isRead: false,
-    },
-    {
-      id: '3',
-      type: 'info',
-      title: 'Notification de test',
-      message: 'Ceci est une notification de test pour vérifier le système',
-      vehicle: 'Renault Clio - AB-123-CD',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-      isRead: true,
-    },
-  ]);
+  const { user } = useAuth();
+  const [sentSignalizations, setSentSignalizations] = useState<Signalization[]>([]);
+  const [receivedSignalizations, setReceivedSignalizations] = useState<Signalization[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'sent' | 'received'>('sent');
 
   const primaryColor = useThemeColor({}, 'primary');
   const secondaryColor = useThemeColor({}, 'secondary');
@@ -66,7 +31,30 @@ export default function NotificationsScreen() {
     new Animated.Value(0),
   ]).current;
 
+  const loadSignalizations = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      setLoading(true);
+      
+      // Charger les signalisations envoyées et reçues en parallèle
+      const [sentData, receivedData] = await Promise.all([
+        SignalizationService.getUserSignalizations(user.id),
+        SignalizationService.getReceivedSignalizations(user.id)
+      ]);
+      
+      setSentSignalizations(sentData);
+      setReceivedSignalizations(receivedData);
+    } catch (error) {
+      console.error('Erreur chargement signalisations:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
+    loadSignalizations();
+    
     // Animation d'entrée
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -76,43 +64,77 @@ export default function NotificationsScreen() {
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
       }),
     ]).start();
 
-    // Animations en cascade pour les cartes
+    // Animation des cartes avec délai
     cardAnimations.forEach((anim, index) => {
       Animated.timing(anim, {
         toValue: 1,
-        duration: 600,
-        delay: 200 + (index * 100),
+        duration: 400,
+        delay: index * 100,
         useNativeDriver: true,
       }).start();
     });
-  }, []);
+  }, [loadSignalizations, fadeAnim, slideAnim, cardAnimations]);
 
-  const getNotificationColor = (type: string) => {
-    switch (type) {
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadSignalizations();
+    setRefreshing(false);
+  };
+
+  const getSignalizationColor = (urgency?: string) => {
+    switch (urgency) {
       case 'urgent': return errorColor;
-      case 'warning': return warningColor;
-      case 'info': return primaryColor;
+      case 'important': return warningColor;
+      case 'normal': return successColor;
       default: return primaryColor;
     }
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
+  const getSignalizationIcon = (urgency?: string) => {
+    switch (urgency) {
       case 'urgent': return 'alert-circle';
-      case 'warning': return 'warning';
-      case 'info': return 'information-circle';
+      case 'important': return 'warning';
+      case 'normal': return 'information-circle';
       default: return 'notifications';
     }
   };
 
-  const formatTimestamp = (timestamp: Date) => {
+  const getSignalizationTitle = (signalization: Signalization) => {
+    if (signalization.reason_type) {
+      const reasonMap: { [key: string]: string } = {
+        'stationnement_genant': 'Stationnement gênant',
+        'probleme_technique': 'Problème technique',
+        'accident': 'Accident',
+        'vehicule_abandonne': 'Véhicule abandonné',
+        'autre': 'Autre problème'
+      };
+      return reasonMap[signalization.reason_type] || 'Nouvelle signalisation';
+    }
+    return 'Nouvelle signalisation';
+  };
+
+  const getSignalizationMessage = (signalization: Signalization) => {
+    if (signalization.vehicle_issue) {
+      return signalization.vehicle_issue;
+    }
+    if (signalization.custom_message) {
+      return signalization.custom_message;
+    }
+    if (signalization.custom_reason) {
+      return signalization.custom_reason;
+    }
+    return 'Signalisation reçue';
+  };
+
+  const formatTimestamp = (timestamp: string) => {
     const now = new Date();
-    const diff = now.getTime() - timestamp.getTime();
+    const signalizationDate = new Date(timestamp);
+    const diff = now.getTime() - signalizationDate.getTime();
     const minutes = Math.floor(diff / (1000 * 60));
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -126,40 +148,107 @@ export default function NotificationsScreen() {
     }
   };
 
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(notifications.map(notification => 
-      notification.id === id ? { ...notification, isRead: true } : notification
-    ));
+  const handleMarkAsResolved = async (id: string) => {
+    try {
+      const success = await SignalizationService.updateSignalizationStatus(id, 'resolved');
+      if (success) {
+        // Mettre à jour les deux listes
+        setSentSignalizations(prev => prev.map(s => 
+          s.id === id ? { ...s, status: 'resolved' } : s
+        ));
+        setReceivedSignalizations(prev => prev.map(s => 
+          s.id === id ? { ...s, status: 'resolved' } : s
+        ));
+      }
+    } catch (error) {
+      console.error('Erreur marquage signalisation résolue:', error);
+      Alert.alert('Erreur', 'Impossible de marquer la signalisation comme résolue');
+    }
   };
 
-  const handleDeleteNotification = (id: string) => {
+  const handleDeleteSignalization = async (id: string) => {
     Alert.alert(
-      'Supprimer la notification',
-      'Êtes-vous sûr de vouloir supprimer cette notification ?',
+      'Supprimer la signalisation',
+      'Êtes-vous sûr de vouloir supprimer cette signalisation ?',
       [
         { text: 'Annuler', style: 'cancel' },
         {
           text: 'Supprimer',
           style: 'destructive',
-          onPress: () => {
-            setNotifications(notifications.filter(notification => notification.id !== id));
+          onPress: async () => {
+            try {
+              const success = await SignalizationService.deleteSignalization(id);
+              if (success) {
+                // Supprimer des deux listes
+                setSentSignalizations(prev => prev.filter(s => s.id !== id));
+                setReceivedSignalizations(prev => prev.filter(s => s.id !== id));
+              }
+            } catch (error) {
+              console.error('Erreur suppression signalisation:', error);
+              Alert.alert('Erreur', 'Impossible de supprimer la signalisation');
+            }
           },
         },
       ]
     );
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(notifications.map(notification => ({ ...notification, isRead: true })));
+  const handleMarkAllAsResolved = async () => {
+    Alert.alert(
+      'Marquer toutes comme résolues',
+      'Êtes-vous sûr de vouloir marquer toutes les signalisations comme résolues ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Confirmer',
+          onPress: async () => {
+            try {
+              const activeSignalizations = currentSignalizations.filter(s => s.status === 'active');
+              await Promise.all(
+                activeSignalizations.map(s => 
+                  SignalizationService.updateSignalizationStatus(s.id, 'resolved')
+                )
+              );
+              
+              // Mettre à jour les deux listes
+              setSentSignalizations(prev => prev.map(s => 
+                s.status === 'active' ? { ...s, status: 'resolved' } : s
+              ));
+              setReceivedSignalizations(prev => prev.map(s => 
+                s.status === 'active' ? { ...s, status: 'resolved' } : s
+              ));
+            } catch (error) {
+              console.error('Erreur marquage toutes résolues:', error);
+              Alert.alert('Erreur', 'Impossible de marquer toutes les signalisations comme résolues');
+            }
+          },
+        },
+      ]
+    );
   };
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  // Obtenir les signalisations actives selon l'onglet sélectionné
+  const currentSignalizations = activeTab === 'sent' ? sentSignalizations : receivedSignalizations;
+  
+  // Statistiques
+  const totalSignalizations = currentSignalizations.length;
+  const urgentSignalizations = currentSignalizations.filter(s => s.urgency_level === 'urgent').length;
+  const importantSignalizations = currentSignalizations.filter(s => s.urgency_level === 'important').length;
+  const activeSignalizations = currentSignalizations.filter(s => s.status === 'active').length;
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ThemedText style={styles.loadingText}>Chargement des signalisations...</ThemedText>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
+      <StatusBar barStyle="light-content" backgroundColor="#1E1B4B" />
       
-      {/* Header avec gradient violet moderne */}
+      {/* Header avec gradient violet moderne (même style que l'onglet principal) */}
       <LinearGradient
         colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
         style={styles.headerGradient}
@@ -175,253 +264,224 @@ export default function NotificationsScreen() {
             }
           ]}
         >
-          <View style={styles.headerContent}>
-            <View style={styles.headerTextContainer}>
-              <ThemedText style={styles.headerTitle}>Notifications</ThemedText>
-              {unreadCount > 0 && (
-                <View style={styles.badgeContainer}>
-                  <LinearGradient
-                    colors={[secondaryColor, '#FB923C']}
-                    style={styles.badge}
-                  >
-                    <ThemedText style={styles.badgeText}>{unreadCount}</ThemedText>
-                  </LinearGradient>
-                </View>
-              )}
-            </View>
-            
-            {unreadCount > 0 && (
-              <TouchableOpacity
-                style={styles.markAllButton}
-                onPress={handleMarkAllAsRead}
+          <View style={styles.headerTop}>
+            <View style={styles.logoContainer}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.logoGradient}
               >
-                <LinearGradient
-                  colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
-                  style={styles.markAllButtonGradient}
-                >
-                  <Ionicons name="checkmark-done" size={16} color="white" />
-                  <ThemedText style={styles.markAllText}>Tout marquer</ThemedText>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
+                <Ionicons name="notifications" size={32} color="#7C3AED" />
+              </LinearGradient>
+            </View>
+          </View>
+          
+          <View style={styles.welcomeSection}>
+            <ThemedText style={styles.greetingText}>Mes Signalisations</ThemedText>
+            <ThemedText style={styles.subtitleText}>
+              {totalSignalizations} signalisation{totalSignalizations > 1 ? 's' : ''} {activeTab === 'sent' ? 'envoyée' : 'reçue'}{totalSignalizations > 1 ? 's' : ''}
+            </ThemedText>
           </View>
         </Animated.View>
       </LinearGradient>
 
-      <ScrollView 
-        style={styles.scrollContainer} 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+      <ScrollView
+        style={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
-        {/* Statistiques avec design sophistiqué */}
-        <View style={styles.statsContainer}>
-          <Animated.View
+        {/* Onglets de navigation */}
+        <Animated.View style={[styles.tabsContainer, { opacity: fadeAnim }]}>
+          <TouchableOpacity
             style={[
-              styles.statsRow,
-              {
-                opacity: cardAnimations[0],
-                transform: [{
-                  translateY: cardAnimations[0].interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [30, 0]
-                  })
-                }]
-              }
+              styles.tabButton,
+              activeTab === 'sent' && styles.activeTabButton
             ]}
+            onPress={() => setActiveTab('sent')}
           >
-            <View style={styles.statCard}>
-              <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC']}
-                style={styles.statGradient}
-              >
-                <View style={[styles.statIcon, { backgroundColor: '#7C3AED' }]}>
-                  <Ionicons name="notifications" size={20} color="white" />
-                </View>
-                <ThemedText style={[styles.statNumber, { color: '#7C3AED' }]}>
-                  {notifications.length}
-                </ThemedText>
-                <ThemedText style={styles.statLabel}>Total</ThemedText>
-              </LinearGradient>
-            </View>
-            
-            <View style={styles.statCard}>
-              <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC']}
-                style={styles.statGradient}
-              >
-                <View style={[styles.statIcon, { backgroundColor: '#F59E0B' }]}>
-                  <Ionicons name="mail-unread" size={20} color="white" />
-                </View>
-                <ThemedText style={[styles.statNumber, { color: '#F59E0B' }]}>
-                  {unreadCount}
-                </ThemedText>
-                <ThemedText style={styles.statLabel}>Non lues</ThemedText>
-              </LinearGradient>
-            </View>
-            
-            <View style={styles.statCard}>
-              <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC']}
-                style={styles.statGradient}
-              >
-                <View style={[styles.statIcon, { backgroundColor: '#EF4444' }]}>
-                  <Ionicons name="alert-circle" size={20} color="white" />
-                </View>
-                <ThemedText style={[styles.statNumber, { color: '#EF4444' }]}>
-                  {notifications.filter(n => n.type === 'urgent').length}
-                </ThemedText>
-                <ThemedText style={styles.statLabel}>Urgentes</ThemedText>
-              </LinearGradient>
-            </View>
-          </Animated.View>
-        </View>
+            <Ionicons 
+              name="send" 
+              size={20} 
+              color={activeTab === 'sent' ? 'white' : '#7C3AED'} 
+            />
+            <ThemedText style={[
+              styles.tabText,
+              activeTab === 'sent' && styles.activeTabText
+            ]}>
+              Envoyées ({sentSignalizations.length})
+            </ThemedText>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              activeTab === 'received' && styles.activeTabButton
+            ]}
+            onPress={() => setActiveTab('received')}
+          >
+            <Ionicons 
+              name="mail" 
+              size={20} 
+              color={activeTab === 'received' ? 'white' : '#7C3AED'} 
+            />
+            <ThemedText style={[
+              styles.tabText,
+              activeTab === 'received' && styles.activeTabText
+            ]}>
+              Reçues ({receivedSignalizations.length})
+            </ThemedText>
+          </TouchableOpacity>
+        </Animated.View>
 
-        {/* Liste des notifications avec design premium */}
-        <View style={styles.notificationsList}>
-          {notifications.length === 0 ? (
+        {/* Statistiques */}
+        <Animated.View style={[styles.statsContainer, { opacity: fadeAnim }]}>
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <ThemedText style={styles.statNumber}>{totalSignalizations}</ThemedText>
+              <ThemedText style={styles.statLabel}>Total</ThemedText>
+            </View>
+            <View style={styles.statCard}>
+              <ThemedText style={[styles.statNumber, { color: errorColor }]}>{urgentSignalizations}</ThemedText>
+              <ThemedText style={styles.statLabel}>Urgentes</ThemedText>
+            </View>
+            <View style={styles.statCard}>
+              <ThemedText style={[styles.statNumber, { color: warningColor }]}>{importantSignalizations}</ThemedText>
+              <ThemedText style={styles.statLabel}>Importantes</ThemedText>
+            </View>
+            <View style={styles.statCard}>
+              <ThemedText style={[styles.statNumber, { color: successColor }]}>{activeSignalizations}</ThemedText>
+              <ThemedText style={styles.statLabel}>Actives</ThemedText>
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Actions */}
+        {activeSignalizations > 0 && (
+          <Animated.View style={[styles.actionsContainer, { opacity: fadeAnim }]}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleMarkAllAsResolved}
+            >
+              <Ionicons name="checkmark-circle" size={20} color={successColor} />
+              <ThemedText style={styles.actionButtonText}>
+                Marquer toutes comme résolues
+              </ThemedText>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        {/* Liste des signalisations */}
+        {currentSignalizations.length === 0 ? (
+          <Animated.View style={[styles.emptyContainer, { opacity: fadeAnim }]}>
+            <Ionicons name="notifications-off" size={64} color={secondaryColor} />
+            <ThemedText style={styles.emptyTitle}>
+              Aucune signalisation {activeTab === 'sent' ? 'envoyée' : 'reçue'}
+            </ThemedText>
+            <ThemedText style={styles.emptySubtitle}>
+              {activeTab === 'sent' 
+                ? 'Vous n\'avez pas encore envoyé de signalisation. Scannez un QR code pour commencer !'
+                : 'Vous n\'avez pas encore reçu de signalisation sur vos véhicules.'
+              }
+            </ThemedText>
+          </Animated.View>
+        ) : (
+          currentSignalizations.map((signalization, index) => (
             <Animated.View
+              key={signalization.id}
               style={[
-                styles.emptyState,
+                styles.signalizationCard,
                 {
-                  opacity: cardAnimations[1],
+                  opacity: cardAnimations[index % cardAnimations.length],
                   transform: [{
-                    translateY: cardAnimations[1].interpolate({
+                    translateY: cardAnimations[index % cardAnimations.length].interpolate({
                       inputRange: [0, 1],
-                      outputRange: [30, 0]
-                    })
-                  }]
-                }
+                      outputRange: [50, 0],
+                    }),
+                  }],
+                },
               ]}
             >
-              <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC']}
-                style={styles.emptyStateGradient}
-              >
-                <View style={[styles.emptyIcon, { backgroundColor: '#7C3AED' }]}>
-                  <Ionicons name="notifications-off" size={40} color="white" />
+              <View style={styles.signalizationHeader}>
+                <View style={styles.signalizationIconContainer}>
+                  <Ionicons
+                    name={getSignalizationIcon(signalization.urgency_level)}
+                    size={24}
+                    color="white"
+                  />
                 </View>
-                <ThemedText style={styles.emptyTitle}>Aucune notification</ThemedText>
-                <ThemedText style={styles.emptyText}>
-                  Vous recevrez des notifications lorsque quelqu&apos;un scannera votre QR code
-                </ThemedText>
-              </LinearGradient>
-            </Animated.View>
-          ) : (
-            notifications.map((notification, index) => (
-              <Animated.View
-                key={notification.id}
-                style={[
-                  styles.notificationCardWrapper,
-                  {
-                    opacity: cardAnimations[(index % 3) + 1],
-                    transform: [{
-                      translateY: cardAnimations[(index % 3) + 1].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [30, 0]
-                      })
-                    }]
-                  }
-                ]}
-              >
-                <View style={[
-                  styles.notificationCard,
-                  { 
-                    borderLeftColor: getNotificationColor(notification.type),
-                    borderLeftWidth: 4,
-                  }
-                ]}>
-                  <LinearGradient
-                    colors={['#FFFFFF', '#F8FAFC']}
-                    style={styles.notificationGradient}
-                  >
-                    <View style={styles.notificationHeader}>
-                      <View style={[
-                        styles.notificationIcon, 
-                        { backgroundColor: getNotificationColor(notification.type) }
-                      ]}>
-                        <Ionicons
-                          name={getNotificationIcon(notification.type)}
-                          size={20}
-                          color="white"
-                        />
-                      </View>
-                      
-                      <View style={styles.notificationContent}>
-                        <View style={styles.notificationTitleRow}>
-                          <ThemedText style={[
-                            styles.notificationTitle,
-                            !notification.isRead && styles.unreadTitle
-                          ]}>
-                            {notification.title}
-                          </ThemedText>
-                          {!notification.isRead && (
-                            <View style={[styles.unreadDot, { backgroundColor: '#7C3AED' }]} />
-                          )}
-                        </View>
-                        
-                        <ThemedText style={styles.notificationMessage}>
-                          {notification.message}
-                        </ThemedText>
-                        
-                        <View style={styles.vehicleInfoContainer}>
-                          <Ionicons name="car" size={16} color="#7C3AED" />
-                          <ThemedText style={styles.vehicleInfo}>
-                            {notification.vehicle}
-                          </ThemedText>
-                        </View>
-                        
-                        {notification.location && (
-                          <View style={styles.locationRow}>
-                            <Ionicons name="location" size={16} color="#6B7280" />
-                            <ThemedText style={styles.locationText}>
-                              {notification.location}
-                            </ThemedText>
-                          </View>
-                        )}
-                        
-                        <View style={styles.timestampContainer}>
-                          <Ionicons name="time" size={14} color="#9CA3AF" />
-                          <ThemedText style={styles.timestamp}>
-                            {formatTimestamp(notification.timestamp)}
-                          </ThemedText>
-                        </View>
-                      </View>
-                    </View>
+                <View style={styles.signalizationInfo}>
+                  <ThemedText style={styles.signalizationTitle}>
+                    {getSignalizationTitle(signalization)}
+                  </ThemedText>
+                  <ThemedText style={styles.signalizationMessage}>
+                    {getSignalizationMessage(signalization)}
+                  </ThemedText>
+                </View>
+                <View style={styles.signalizationStatus}>
+                  <View style={[
+                    styles.statusBadge,
+                    { backgroundColor: getSignalizationColor(signalization.urgency_level) }
+                  ]}>
+                    <ThemedText style={styles.statusText}>
+                      {signalization.urgency_level === 'urgent' ? 'Urgent' : 
+                       signalization.urgency_level === 'important' ? 'Important' : 'Normal'}
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
 
-                    <View style={styles.notificationActions}>
-                      {!notification.isRead && (
-                        <TouchableOpacity
-                          style={[styles.actionButton, { backgroundColor: '#7C3AED' }]}
-                          onPress={() => handleMarkAsRead(notification.id)}
-                        >
-                          <LinearGradient
-                            colors={['#7C3AED', '#5B21B6']}
-                            style={styles.actionButtonGradient}
-                          >
-                            <Ionicons name="checkmark" size={16} color="white" />
-                            <ThemedText style={styles.actionButtonText}>Marquer lu</ThemedText>
-                          </LinearGradient>
-                        </TouchableOpacity>
-                      )}
-                      
-                      <TouchableOpacity
-                        style={[styles.actionButton, { backgroundColor: '#EF4444' }]}
-                        onPress={() => handleDeleteNotification(notification.id)}
-                      >
-                        <LinearGradient
-                          colors={['#EF4444', '#DC2626']}
-                          style={styles.actionButtonGradient}
-                        >
-                          <Ionicons name="trash" size={16} color="white" />
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    </View>
-                  </LinearGradient>
+              {/* Informations du véhicule */}
+              {signalization.vehicle_brand && (
+                <View style={styles.vehicleInfo}>
+                  <Ionicons name="car" size={16} color={secondaryColor} />
+                  <ThemedText style={styles.vehicleText}>
+                    {signalization.vehicle_brand} {signalization.vehicle_model} - {signalization.vehicle_license_plate}
+                  </ThemedText>
                 </View>
-              </Animated.View>
-            ))
-          )}
-        </View>
+              )}
+
+              {/* Informations du rapporteur */}
+              {signalization.reporter_display_name && (
+                <View style={styles.reporterInfo}>
+                  <Ionicons name="person" size={16} color={secondaryColor} />
+                  <ThemedText style={styles.reporterText}>
+                    {signalization.reporter_display_name}
+                  </ThemedText>
+                </View>
+              )}
+
+              <View style={styles.signalizationFooter}>
+                <ThemedText style={styles.signalizationTime}>
+                  {formatTimestamp(signalization.created_at)}
+                </ThemedText>
+                
+                <View style={styles.signalizationActions}>
+                  {signalization.status === 'active' && (
+                    <TouchableOpacity
+                      style={styles.actionButtonSmall}
+                      onPress={() => handleMarkAsResolved(signalization.id)}
+                    >
+                      <Ionicons name="checkmark" size={16} color={successColor} />
+                      <ThemedText style={[styles.actionTextSmall, { color: successColor }]}>
+                        Résolu
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )}
+                  
+                  <TouchableOpacity
+                    style={styles.actionButtonSmall}
+                    onPress={() => handleDeleteSignalization(signalization.id)}
+                  >
+                    <Ionicons name="trash" size={16} color={errorColor} />
+                    <ThemedText style={[styles.actionTextSmall, { color: errorColor }]}>
+                      Supprimer
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Animated.View>
+          ))
+        )}
       </ScrollView>
     </View>
   );
@@ -432,261 +492,277 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+  },
   headerGradient: {
     paddingTop: 50,
-    paddingBottom: 20,
+    paddingBottom: 30,
     paddingHorizontal: 24,
   },
   header: {
     // Animation handled by Animated.View
   },
-  headerContent: {
+  headerTop: {
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    marginBottom: 20,
   },
-  headerTextContainer: {
-    flexDirection: 'row',
+  logoContainer: {
+    marginBottom: 0,
+  },
+  logoGradient: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  headerTitle: {
-    fontSize: 24,
+  welcomeSection: {
+    alignItems: 'center',
+  },
+  greetingText: {
+    fontSize: 28,
     fontWeight: '700',
     color: 'white',
+    marginBottom: 8,
+    textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
-  badgeContainer: {
-    // Container for badge
+  subtitleText: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontWeight: '500',
   },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    minWidth: 24,
-    alignItems: 'center',
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    marginTop: -20,
   },
-  badgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '700',
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    borderRadius: 15,
+    marginTop: 20,
+    marginBottom: 20,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  markAllButton: {
-    borderRadius: 12,
-  },
-  markAllButtonGradient: {
+  tabButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 12,
-    gap: 6,
   },
-  markAllText: {
-    color: 'white',
+  activeTabButton: {
+    backgroundColor: '#7C3AED',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tabText: {
+    marginLeft: 8,
     fontSize: 14,
     fontWeight: '600',
+    color: '#7C3AED',
   },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
+  activeTabText: {
+    color: 'white',
   },
   statsContainer: {
-    padding: 24,
+    marginTop: 20,
+    marginBottom: 20,
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 16,
+    justifyContent: 'space-between',
   },
   statCard: {
     flex: 1,
-    borderRadius: 20,
+    backgroundColor: 'white',
+    padding: 15,
+    marginHorizontal: 5,
+    borderRadius: 15,
+    alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  statGradient: {
-    padding: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-  },
-  statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
+    shadowRadius: 4,
+    elevation: 3,
   },
   statNumber: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 4,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
   },
   statLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#666',
     textAlign: 'center',
-    fontWeight: '500',
   },
-  notificationsList: {
-    padding: 24,
+  actionsContainer: {
+    marginBottom: 20,
   },
-  emptyState: {
-    borderRadius: 24,
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 15,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  emptyStateGradient: {
-    alignItems: 'center',
-    padding: 40,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+  actionButtonText: {
+    marginLeft: 10,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
   },
-  emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    alignItems: 'center',
+  emptyContainer: {
+    flex: 1,
     justifyContent: 'center',
-    marginBottom: 24,
+    alignItems: 'center',
+    paddingVertical: 60,
   },
   emptyTitle: {
     fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 12,
-    color: '#1F2937',
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 20,
+    marginBottom: 10,
   },
-  emptyText: {
-    textAlign: 'center',
-    color: '#6B7280',
-    lineHeight: 22,
+  emptySubtitle: {
     fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 40,
   },
-  notificationCardWrapper: {
-    marginBottom: 20,
-  },
-  notificationCard: {
-    borderRadius: 24,
+  signalizationCard: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    marginBottom: 15,
+    padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  notificationGradient: {
-    padding: 24,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  notificationHeader: {
+  signalizationHeader: {
     flexDirection: 'row',
-    gap: 16,
-    marginBottom: 20,
+    alignItems: 'flex-start',
+    marginBottom: 15,
   },
-  notificationIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    alignItems: 'center',
+  signalizationIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#8B5CF6',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
   },
-  notificationContent: {
+  signalizationInfo: {
     flex: 1,
   },
-  notificationTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  notificationTitle: {
+  signalizationTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    flex: 1,
-    color: '#1F2937',
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
   },
-  unreadTitle: {
-    fontWeight: '700',
+  signalizationMessage: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
   },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginLeft: 8,
+  signalizationStatus: {
+    marginLeft: 10,
   },
-  notificationMessage: {
-    fontSize: 15,
-    marginBottom: 12,
-    lineHeight: 22,
-    color: '#1F2937',
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  vehicleInfoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+  statusText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: 'white',
   },
   vehicleInfo: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  locationText: {
+  vehicleText: {
+    marginLeft: 8,
     fontSize: 14,
-    color: '#6B7280',
+    color: '#666',
   },
-  timestampContainer: {
+  reporterInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    marginBottom: 15,
   },
-  timestamp: {
+  reporterText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#666',
+  },
+  signalizationFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  signalizationTime: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: '#999',
   },
-  notificationActions: {
+  signalizationActions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
   },
-  actionButton: {
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  actionButtonGradient: {
+  actionButtonSmall: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginLeft: 10,
+    borderRadius: 20,
+    backgroundColor: '#f8f9fa',
   },
-  actionButtonText: {
-    color: 'white',
+  actionTextSmall: {
+    marginLeft: 4,
     fontSize: 12,
     fontWeight: '600',
   },

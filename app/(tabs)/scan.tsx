@@ -6,12 +6,13 @@ import { useChat } from '@/contexts/ChatContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { ChatService, Conversation } from '@/lib/chatService';
 import { QRCodeService } from '@/lib/qrCodeService';
+import { SignalizationService } from '@/lib/signalizationService';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
-import { Alert, Animated, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Alert, Animated, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -22,6 +23,10 @@ export default function ScanScreen() {
   const [messageText, setMessageText] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [targetDisplayName, setTargetDisplayName] = useState<string>('propriétaire');
+  const [selectedReason, setSelectedReason] = useState<string>('');
+  const [customReason, setCustomReason] = useState<string>('');
+  const [vehicleIssue, setVehicleIssue] = useState<string>('');
+  const [urgency, setUrgency] = useState<string>('normal');
   const [showQRDebugger, setShowQRDebugger] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -158,28 +163,108 @@ export default function ScanScreen() {
   };
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !scannedVehicleId || sendingMessage) return;
+    if (!scannedVehicleId || sendingMessage) return;
 
     setSendingMessage(true);
     try {
-      const conversation = await createConversationFromQR(scannedVehicleId, messageText.trim());
+      // Valider le QR code et extraire l'ID du véhicule
+      const qrValidation = QRCodeService.validateQRCode(scannedVehicleId);
       
-      if (conversation) {
+      if (!qrValidation.isValid || !qrValidation.vehicleId) {
+        throw new Error('QR code invalide. Assurez-vous de scanner un QR code NotifCar valide.');
+      }
+
+      // Trouver le véhicule par son ID
+      const { data: vehicle, error: vehicleError } = await supabase
+        .from('vehicles')
+        .select('id, owner_id, brand, model, license_plate')
+        .eq('id', qrValidation.vehicleId)
+        .single();
+
+      if (vehicleError || !vehicle) {
+        throw new Error('Véhicule non trouvé. Le QR code semble valide mais le véhicule n\'existe plus.');
+      }
+
+      // Convertir la raison sélectionnée en format de base de données
+      const reasonTypeMap: { [key: string]: string } = {
+        'Stationnement gênant': 'stationnement_genant',
+        'Problème technique': 'probleme_technique',
+        'Accident': 'accident',
+        'Véhicule abandonné': 'vehicule_abandonne',
+        'Autre': 'autre'
+      };
+
+      const reasonType = reasonTypeMap[selectedReason] || 'autre';
+
+      // Construire le message structuré pour la conversation
+      let structuredMessage = '';
+      
+      // Ajouter la raison du scan
+      if (selectedReason) {
+        structuredMessage += `🚨 **Raison du scan:** ${selectedReason}\n\n`;
+      }
+      
+      // Ajouter la raison personnalisée si fournie
+      if (customReason.trim()) {
+        structuredMessage += `📝 **Détails:** ${customReason.trim()}\n\n`;
+      }
+      
+      // Ajouter le problème du véhicule
+      if (vehicleIssue.trim()) {
+        structuredMessage += `🚗 **Problème observé:** ${vehicleIssue.trim()}\n\n`;
+      }
+      
+      // Ajouter le niveau d'urgence
+      const urgencyEmoji = urgency === 'urgent' ? '🔴' : urgency === 'important' ? '🟡' : '🟢';
+      const urgencyText = urgency === 'urgent' ? 'Urgent' : urgency === 'important' ? 'Important' : 'Normal';
+      structuredMessage += `${urgencyEmoji} **Niveau d'urgence:** ${urgencyText}\n\n`;
+      
+      // Ajouter le message personnalisé s'il y en a un
+      if (messageText.trim()) {
+        structuredMessage += `💬 **Message:** ${messageText.trim()}`;
+      }
+
+      // Faire les deux actions en parallèle : créer la conversation ET enregistrer la signalisation
+      const [conversation, signalization] = await Promise.all([
+        // 1. Créer la conversation et envoyer le message privé
+        createConversationFromQR(scannedVehicleId, structuredMessage),
+        
+        // 2. Enregistrer la signalisation dans la base de données
+        SignalizationService.createSignalization({
+          vehicle_id: vehicle.id,
+          reason_type: reasonType as any,
+          custom_reason: selectedReason === 'Autre' ? customReason.trim() : undefined,
+          vehicle_issue: vehicleIssue.trim() || undefined,
+          urgency_level: urgency as 'urgent' | 'important' | 'normal',
+          custom_message: messageText.trim() || undefined,
+        })
+      ]);
+      
+      if (conversation && signalization) {
+        // Lier la signalisation à la conversation
+        await SignalizationService.updateSignalizationConversation(signalization.id, conversation.id);
+        
         Alert.alert(
-          'Message envoyé !',
-          'Votre message a été envoyé au propriétaire du véhicule. Vous pouvez maintenant communiquer en privé.',
+          'Signalisation créée !',
+          '✅ Votre signalisation a été enregistrée dans la base de données\n📱 Un message privé a été envoyé au propriétaire du véhicule\n💬 Vous pouvez maintenant communiquer en privé',
           [
             {
               text: 'OK',
               onPress: () => {
                 setShowMessageModal(false);
                 setMessageText('');
+                setSelectedReason('');
+                setCustomReason('');
+                setVehicleIssue('');
+                setUrgency('normal');
                 setScannedVehicleId(null);
                 setScanned(false);
               },
             },
           ]
         );
+      } else {
+        throw new Error('Erreur lors de la création de la signalisation ou de la conversation');
       }
     } catch (error) {
       console.error('Erreur envoi message:', error);
@@ -192,6 +277,10 @@ export default function ScanScreen() {
   const handleCancelMessage = () => {
     setShowMessageModal(false);
     setMessageText('');
+    setSelectedReason('');
+    setCustomReason('');
+    setVehicleIssue('');
+    setUrgency('normal');
     setScannedVehicleId(null);
     setScanned(false);
   };
@@ -498,7 +587,7 @@ export default function ScanScreen() {
             <TouchableOpacity onPress={handleCancelMessage} style={styles.modalCloseButton}>
               <Ionicons name="close" size={24} color="#6B7280" />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Envoyer un message</Text>
+            <Text style={styles.modalTitle}>Formulaire de contact</Text>
             <TouchableOpacity 
               onPress={Keyboard.dismiss} 
               style={styles.keyboardDismissButton}
@@ -507,34 +596,169 @@ export default function ScanScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
             <View style={styles.messageInfo}>
-              <Ionicons name="car" size={24} color="#7C3AED" />
-              <Text style={styles.messageInfoText}>
-                Vous allez envoyer un message à {targetDisplayName}
-              </Text>
+              <View style={styles.messageInfoIcon}>
+                <Ionicons name="car" size={24} color="#7C3AED" />
+              </View>
+              <View style={styles.messageInfoContent}>
+                <Text style={styles.messageInfoTitle}>Contact du propriétaire</Text>
+                <Text style={styles.messageInfoText}>
+                  Vous contactez {targetDisplayName}
+                </Text>
+              </View>
             </View>
 
-            <TextInput
-              style={styles.messageInput}
-              value={messageText}
-              onChangeText={setMessageText}
-              placeholder="Décrivez le problème ou laissez un message..."
-              placeholderTextColor="#999"
-              multiline
-              maxLength={500}
-              textAlignVertical="top"
-              returnKeyType="default"
-              blurOnSubmit={false}
-              autoFocus={true}
-            />
+            {/* Section Raison du scan */}
+            <View style={styles.formSection}>
+              <Text style={styles.sectionTitle}>🚨 Pourquoi scannez-vous ce QR code ?</Text>
+              
+              <View style={styles.reasonOptions}>
+                <TouchableOpacity
+                  style={[styles.reasonOption, selectedReason === 'Stationnement gênant' && styles.reasonOptionSelected]}
+                  onPress={() => setSelectedReason('Stationnement gênant')}
+                >
+                  <View style={[styles.reasonIcon, selectedReason === 'Stationnement gênant' && styles.reasonIconSelected]}>
+                    <Ionicons name="car-outline" size={24} color={selectedReason === 'Stationnement gênant' ? 'white' : '#7C3AED'} />
+                  </View>
+                  <Text style={[styles.reasonText, selectedReason === 'Stationnement gênant' && styles.reasonTextSelected]}>
+                    Stationnement gênant
+                  </Text>
+                </TouchableOpacity>
 
-            <View style={styles.characterCount}>
-              <Text style={styles.characterCountText}>
-                {messageText.length}/500
-              </Text>
+                <TouchableOpacity
+                  style={[styles.reasonOption, selectedReason === 'Problème technique' && styles.reasonOptionSelected]}
+                  onPress={() => setSelectedReason('Problème technique')}
+                >
+                  <View style={[styles.reasonIcon, selectedReason === 'Problème technique' && styles.reasonIconSelected]}>
+                    <Ionicons name="warning-outline" size={24} color={selectedReason === 'Problème technique' ? 'white' : '#F59E0B'} />
+                  </View>
+                  <Text style={[styles.reasonText, selectedReason === 'Problème technique' && styles.reasonTextSelected]}>
+                    Problème technique
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.reasonOption, selectedReason === 'Accident' && styles.reasonOptionSelected]}
+                  onPress={() => setSelectedReason('Accident')}
+                >
+                  <View style={[styles.reasonIcon, selectedReason === 'Accident' && styles.reasonIconSelected]}>
+                    <Ionicons name="alert-circle-outline" size={24} color={selectedReason === 'Accident' ? 'white' : '#EF4444'} />
+                  </View>
+                  <Text style={[styles.reasonText, selectedReason === 'Accident' && styles.reasonTextSelected]}>
+                    Accident
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.reasonOption, selectedReason === 'Véhicule abandonné' && styles.reasonOptionSelected]}
+                  onPress={() => setSelectedReason('Véhicule abandonné')}
+                >
+                  <View style={[styles.reasonIcon, selectedReason === 'Véhicule abandonné' && styles.reasonIconSelected]}>
+                    <Ionicons name="time-outline" size={24} color={selectedReason === 'Véhicule abandonné' ? 'white' : '#8B5CF6'} />
+                  </View>
+                  <Text style={[styles.reasonText, selectedReason === 'Véhicule abandonné' && styles.reasonTextSelected]}>
+                    Véhicule abandonné
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.reasonOption, selectedReason === 'Autre' && styles.reasonOptionSelected]}
+                  onPress={() => setSelectedReason('Autre')}
+                >
+                  <View style={[styles.reasonIcon, selectedReason === 'Autre' && styles.reasonIconSelected]}>
+                    <Ionicons name="ellipsis-horizontal-outline" size={24} color={selectedReason === 'Autre' ? 'white' : '#6B7280'} />
+                  </View>
+                  <Text style={[styles.reasonText, selectedReason === 'Autre' && styles.reasonTextSelected]}>
+                    Autre
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {selectedReason === 'Autre' && (
+                <TextInput
+                  style={styles.customInput}
+                  value={customReason}
+                  onChangeText={setCustomReason}
+                  placeholder="Précisez votre raison..."
+                  placeholderTextColor="#999"
+                />
+              )}
             </View>
-          </View>
+
+            {/* Section Problème du véhicule */}
+            <View style={styles.formSection}>
+              <Text style={styles.sectionTitle}>🚗 Que se passe-t-il avec le véhicule ?</Text>
+              <TextInput
+                style={styles.textAreaInput}
+                value={vehicleIssue}
+                onChangeText={setVehicleIssue}
+                placeholder="Décrivez ce que vous observez (ex: phares allumés, porte ouverte, dégâts visibles...)"
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+
+            {/* Section Niveau d'urgence */}
+            <View style={styles.formSection}>
+              <Text style={styles.sectionTitle}>⚡ Niveau d'urgence</Text>
+              
+              <View style={styles.urgencyOptions}>
+                <TouchableOpacity
+                  style={[styles.urgencyOption, urgency === 'urgent' && styles.urgencyOptionSelected]}
+                  onPress={() => setUrgency('urgent')}
+                >
+                  <Text style={styles.urgencyEmoji}>🔴</Text>
+                  <Text style={[styles.urgencyText, urgency === 'urgent' && styles.urgencyTextSelected]}>
+                    Urgent
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.urgencyOption, urgency === 'important' && styles.urgencyOptionSelected]}
+                  onPress={() => setUrgency('important')}
+                >
+                  <Text style={styles.urgencyEmoji}>🟡</Text>
+                  <Text style={[styles.urgencyText, urgency === 'important' && styles.urgencyTextSelected]}>
+                    Important
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.urgencyOption, urgency === 'normal' && styles.urgencyOptionSelected]}
+                  onPress={() => setUrgency('normal')}
+                >
+                  <Text style={styles.urgencyEmoji}>🟢</Text>
+                  <Text style={[styles.urgencyText, urgency === 'normal' && styles.urgencyTextSelected]}>
+                    Normal
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Section Message personnalisé */}
+            <View style={styles.formSection}>
+              <Text style={styles.sectionTitle}>💬 Message personnalisé (optionnel)</Text>
+              <TextInput
+                style={styles.textAreaInput}
+                value={messageText}
+                onChangeText={setMessageText}
+                placeholder="Ajoutez des détails supplémentaires..."
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                maxLength={500}
+              />
+              <View style={styles.characterCount}>
+                <Text style={styles.characterCountText}>
+                  {messageText.length}/500
+                </Text>
+              </View>
+            </View>
+          </ScrollView>
 
           <View style={styles.modalActions}>
             <TouchableOpacity
@@ -547,10 +771,10 @@ export default function ScanScreen() {
             <TouchableOpacity
               style={[
                 styles.sendButton,
-                (!messageText.trim() || sendingMessage) && styles.sendButtonDisabled
+                (!selectedReason && !customReason.trim() && !vehicleIssue.trim() && !messageText.trim()) && styles.sendButtonDisabled
               ]}
               onPress={handleSendMessage}
-              disabled={!messageText.trim() || sendingMessage}
+              disabled={(!selectedReason && !customReason.trim() && !vehicleIssue.trim() && !messageText.trim()) || sendingMessage}
             >
               {sendingMessage ? (
                 <Text style={styles.sendButtonText}>Envoi...</Text>
@@ -882,10 +1106,10 @@ const styles = StyleSheet.create({
   permissionButton: {
     marginTop: 20,
   },
-  // Styles pour le modal de message
+  // Styles pour le modal de message amélioré
   modalContainer: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F1F5F9',
   },
   modalContentWrapper: {
     flex: 1,
@@ -894,43 +1118,73 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
     backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   modalCloseButton: {
-    padding: 8,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#1F2937',
   },
   modalPlaceholder: {
     width: 40,
   },
   keyboardDismissButton: {
-    padding: 8,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
   },
   modalContent: {
     flex: 1,
-    padding: 20,
+    padding: 24,
   },
   messageInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  messageInfoIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F3E8FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  messageInfoContent: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  messageInfoTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 4,
   },
   messageInfoText: {
     fontSize: 14,
-    color: '#6B7280',
-    marginLeft: 12,
-    flex: 1,
+    color: '#64748B',
+    fontWeight: '500',
   },
   messageInput: {
     backgroundColor: 'white',
@@ -958,34 +1212,52 @@ const styles = StyleSheet.create({
   },
   modalActions: {
     flexDirection: 'row',
-    padding: 20,
-    gap: 12,
+    padding: 24,
+    gap: 16,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    paddingVertical: 18,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontWeight: '700',
+    color: '#64748B',
   },
   sendButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 18,
+    borderRadius: 16,
     backgroundColor: '#7C3AED',
     alignItems: 'center',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   sendButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: '#CBD5E1',
+    shadowColor: '#CBD5E1',
+    shadowOpacity: 0.2,
   },
   sendButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: 'white',
   },
   // Styles pour le bouton de test
@@ -1157,5 +1429,136 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginTop: 4,
+  },
+  // Styles pour le formulaire amélioré
+  formSection: {
+    marginBottom: 28,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  reasonOptions: {
+    gap: 12,
+  },
+  reasonOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    padding: 18,
+    borderRadius: 16,
+    borderWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  reasonOptionSelected: {
+    backgroundColor: '#7C3AED',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  reasonText: {
+    fontSize: 16,
+    color: '#64748B',
+    marginLeft: 14,
+    fontWeight: '600',
+  },
+  reasonTextSelected: {
+    color: 'white',
+    fontWeight: '700',
+  },
+  reasonIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reasonIconSelected: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  customInput: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 18,
+    fontSize: 16,
+    color: '#1F2937',
+    borderWidth: 0,
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  textAreaInput: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 18,
+    fontSize: 16,
+    color: '#1F2937',
+    borderWidth: 0,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  urgencyOptions: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  urgencyOption: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  urgencyOptionSelected: {
+    backgroundColor: '#7C3AED',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  urgencyEmoji: {
+    fontSize: 28,
+    marginBottom: 8,
+  },
+  urgencyText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  urgencyTextSelected: {
+    color: 'white',
+    fontWeight: '700',
   },
 });

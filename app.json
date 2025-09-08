@@ -48,7 +48,7 @@
           "sounds": [
             "./assets/sounds/notification.wav"
           ]
-        }
+        }on
       ],
       [
         "expo-notifications",

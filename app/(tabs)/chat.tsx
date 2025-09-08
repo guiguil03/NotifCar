@@ -1,9 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     Alert,
+    Animated,
     FlatList,
     RefreshControl,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -20,9 +23,27 @@ export default function ChatScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
 
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
   useEffect(() => {
     loadConversations();
-  }, []);
+    
+    // Animation d'entrée
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
 
   const loadConversations = async () => {
     try {
@@ -135,26 +156,134 @@ export default function ChatScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Chargement des conversations...</Text>
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#1E1B4B" />
+        <LinearGradient
+          colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
+          style={styles.headerGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Animated.View
+            style={[
+              styles.header,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }]
+              }
+            ]}
+          >
+            <View style={styles.headerTop}>
+              <View style={styles.logoContainer}>
+                <LinearGradient
+                  colors={['#FFFFFF', '#F8FAFC']}
+                  style={styles.logoGradient}
+                >
+                  <Ionicons name="chatbubbles" size={32} color="#7C3AED" />
+                </LinearGradient>
+              </View>
+            </View>
+            
+            <View style={styles.welcomeSection}>
+              <Text style={styles.greetingText}>Messages</Text>
+              <Text style={styles.subtitleText}>Chargement des conversations...</Text>
+            </View>
+          </Animated.View>
+        </LinearGradient>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Chargement des conversations...</Text>
+        </View>
       </View>
     );
   }
 
   if (conversations.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="chatbubbles-outline" size={80} color="#ccc" />
-        <Text style={styles.emptyTitle}>Aucune conversation</Text>
-        <Text style={styles.emptySubtitle}>
-          Scannez un QR code pour commencer une conversation
-        </Text>
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#1E1B4B" />
+        <LinearGradient
+          colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
+          style={styles.headerGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Animated.View
+            style={[
+              styles.header,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }]
+              }
+            ]}
+          >
+            <View style={styles.headerTop}>
+              <View style={styles.logoContainer}>
+                <LinearGradient
+                  colors={['#FFFFFF', '#F8FAFC']}
+                  style={styles.logoGradient}
+                >
+                  <Ionicons name="chatbubbles" size={32} color="#7C3AED" />
+                </LinearGradient>
+              </View>
+            </View>
+            
+            <View style={styles.welcomeSection}>
+              <Text style={styles.greetingText}>Messages</Text>
+              <Text style={styles.subtitleText}>Aucune conversation</Text>
+            </View>
+          </Animated.View>
+        </LinearGradient>
+        <View style={styles.emptyContainer}>
+          <Ionicons name="chatbubbles-outline" size={80} color="#ccc" />
+          <Text style={styles.emptyTitle}>Aucune conversation</Text>
+          <Text style={styles.emptySubtitle}>
+            Scannez un QR code pour commencer une conversation
+          </Text>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#1E1B4B" />
+      
+      {/* Header avec gradient violet moderne (même style que l'onglet principal) */}
+      <LinearGradient
+        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
+        style={styles.headerGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Animated.View
+          style={[
+            styles.header,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
+          <View style={styles.headerTop}>
+            <View style={styles.logoContainer}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.logoGradient}
+              >
+                <Ionicons name="chatbubbles" size={32} color="#7C3AED" />
+              </LinearGradient>
+            </View>
+          </View>
+          
+          <View style={styles.welcomeSection}>
+            <Text style={styles.greetingText}>Messages</Text>
+            <Text style={styles.subtitleText}>
+              {conversations.length} conversation{conversations.length > 1 ? 's' : ''}
+            </Text>
+          </View>
+        </Animated.View>
+      </LinearGradient>
+
       <FlatList
         data={conversations}
         keyExtractor={(item) => item.id}
@@ -178,13 +307,63 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F8FAFC',
+  },
+  headerGradient: {
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 24,
+  },
+  header: {
+    // Animation handled by Animated.View
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  logoContainer: {
+    marginBottom: 0,
+  },
+  logoGradient: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  welcomeSection: {
+    alignItems: 'center',
+  },
+  greetingText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 8,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  subtitleText: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontWeight: '500',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F8FAFC',
+    marginTop: -20,
   },
   loadingText: {
     fontSize: 16,
@@ -195,7 +374,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F8FAFC',
+    marginTop: -20,
   },
   emptyTitle: {
     fontSize: 20,
@@ -211,9 +391,10 @@ const styles = StyleSheet.create({
   },
   conversationsList: {
     flex: 1,
+    marginTop: -20,
   },
   conversationsContent: {
-    padding: 16,
+    padding: 24,
   },
   conversationItem: {
     flexDirection: 'row',

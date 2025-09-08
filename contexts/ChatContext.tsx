@@ -16,6 +16,7 @@ interface ChatContextType {
   markAsRead: (conversationId: string) => Promise<void>;
   updateConversationStatus: (status: 'active' | 'resolved' | 'closed') => Promise<void>;
   createConversationFromQR: (vehicleId: string, initialMessage: string) => Promise<Conversation | null>;
+  createConversationFromQRWithMetadata: (vehicleId: string, initialMessage: string, metadata: any) => Promise<Conversation | null>;
   
   // État
   setCurrentConversation: (conversation: Conversation | null) => void;
@@ -201,6 +202,37 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
   }, [user?.id]);
 
+  // Créer une conversation à partir d'un scan QR avec métadonnées
+  const createConversationFromQRWithMetadata = useCallback(async (
+    qrCode: string, 
+    initialMessage: string,
+    metadata: any
+  ): Promise<Conversation | null> => {
+    if (!user?.id) return null;
+
+    try {
+      setError(null);
+      
+      // Créer la conversation en cherchant le véhicule par son QR code
+      const conversation = await ChatService.createConversationWithMetadata({
+        vehicleId: qrCode, // Le QR code scanné
+        reporterId: user.id,
+        subject: 'Problème signalé via QR Code',
+        initialMessage,
+        metadata,
+      });
+
+      // Ajouter à la liste des conversations
+      setConversations(prev => [conversation, ...prev]);
+      
+      return conversation;
+    } catch (err) {
+      console.error('Erreur création conversation QR avec métadonnées:', err);
+      setError('Impossible de créer la conversation');
+      return null;
+    }
+  }, [user?.id]);
+
   // Effacer l'erreur
   const clearError = useCallback(() => {
     setError(null);
@@ -271,6 +303,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     markAsRead,
     updateConversationStatus,
     createConversationFromQR,
+    createConversationFromQRWithMetadata,
     setCurrentConversation,
     clearError,
   };

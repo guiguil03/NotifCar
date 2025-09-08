@@ -8,7 +8,16 @@ export interface Message {
   senderId: string;
   content: string;
   messageType: 'text' | 'image' | 'location' | 'system';
-  metadata?: any;
+  metadata?: {
+    formData?: {
+      reason?: string;
+      customReason?: string;
+      vehicleIssue?: string;
+      urgency?: 'urgent' | 'important' | 'normal';
+      customMessage?: string;
+    };
+    [key: string]: any;
+  };
   isRead: boolean;
   createdAt: string;
 }
@@ -41,6 +50,7 @@ export interface CreateConversationData {
   reporterId: string;
   subject?: string;
   initialMessage?: string;
+  metadata?: any;
 }
 
 export class ChatService {
@@ -145,6 +155,11 @@ export class ChatService {
       console.error('Erreur création conversation:', error);
       throw new Error('Impossible de créer la conversation');
     }
+  }
+
+  // Créer une conversation avec métadonnées (alias pour createConversation)
+  static async createConversationWithMetadata(data: CreateConversationData): Promise<Conversation> {
+    return this.createConversation(data);
   }
 
   // Obtenir les conversations d'un utilisateur
