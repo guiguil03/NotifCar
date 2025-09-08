@@ -120,23 +120,7 @@ export class SignalizationService {
   static async getUserSignalizations(userId: string): Promise<Signalization[]> {
     try {
       const { data, error } = await supabase
-        .from('signalizations')
-        .select(`
-          id,
-          created_at,
-          reporter_id,
-          vehicle_id,
-          reason_type,
-          custom_reason,
-          vehicle_issue,
-          urgency_level,
-          custom_message,
-          status,
-          conversation_id,
-          vehicles!inner(brand, model, license_plate)
-        `)
-        .eq('reporter_id', userId)
-        .order('created_at', { ascending: false });
+        .rpc('get_user_signalizations', { p_user_id: userId });
 
       if (error) {
         console.error('Erreur récupération signalisations utilisateur:', error);
@@ -148,12 +132,10 @@ export class SignalizationService {
       const reporterEmail = userData?.user?.email || 'Utilisateur inconnu';
       const reporterDisplayName = reporterEmail.split('@')[0];
 
-      return data.map(item => this.mapSignalizationFromDB({
+      return data.map(item => this.mapSignalizationFromRPC({
         ...item,
-        profiles: {
-          display_name: reporterDisplayName,
-          email: reporterEmail
-        }
+        reporter_display_name: reporterDisplayName,
+        reporter_email: reporterEmail
       }));
     } catch (error) {
       console.error('Erreur récupération signalisations utilisateur:', error);
@@ -174,7 +156,16 @@ export class SignalizationService {
         throw error;
       }
 
-      return data.map(this.mapSignalizationFromRPC);
+      // Récupérer les informations du rapporteur depuis auth.users
+      const { data: userData } = await supabase.auth.getUser();
+      const reporterEmail = userData?.user?.email || 'Utilisateur inconnu';
+      const reporterDisplayName = reporterEmail.split('@')[0];
+
+      return data.map(item => this.mapSignalizationFromRPC({
+        ...item,
+        reporter_display_name: reporterDisplayName,
+        reporter_email: reporterEmail
+      }));
     } catch (error) {
       console.error('Erreur récupération signalisations reçues:', error);
       throw new Error('Impossible de récupérer les signalisations reçues');
