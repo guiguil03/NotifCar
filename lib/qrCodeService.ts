@@ -20,12 +20,15 @@ export class QRCodeService {
   }
 
   /**
-   * Génère un ID unique pour le véhicule
+   * Génère un ID unique pour le véhicule (UUID v4)
    */
   static generateUniqueVehicleId(): string {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 8);
-    return `VH${timestamp}${random}`.toUpperCase();
+    // Générer un UUID v4 simple
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
   }
 
   /**
@@ -115,16 +118,61 @@ export class QRCodeService {
    */
   static validateQRCode(qrString: string): { isValid: boolean; vehicleId?: string; ownerId?: string } {
     try {
+      console.log('Validation QR code:', qrString);
+      console.log('Type:', typeof qrString);
+      console.log('Longueur:', qrString.length);
+      
+      if (!qrString || typeof qrString !== 'string') {
+        console.log('QR code vide ou pas une string');
+        return { isValid: false };
+      }
+
       if (!qrString.startsWith('notifcar:')) {
+        console.log('Ne commence pas par notifcar:');
         return { isValid: false };
       }
 
       const parts = qrString.split(':');
-      if (parts.length !== 3) {
+      console.log('Parties après split:', parts);
+      console.log('Nombre de parties:', parts.length);
+      
+      // Helper: validation simple d'un UUID v4
+      const isUuid = (value: string | undefined): boolean => {
+        if (!value) return false;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(value);
+      };
+
+      let vehicleId: string | undefined;
+      let ownerId: string | undefined;
+
+      if (parts.length === 3) {
+        [, vehicleId, ownerId] = parts;
+      } else if (parts.length === 5 && parts[0] === 'notifcar' && parts[1] === 'notifcar') {
+        // Format toléré: notifcar:notifcar:<vehicleId>:<ownerId>:<ownerId>
+        const candVehicle = parts[2];
+        const candOwner1 = parts[3];
+        const candOwner2 = parts[4];
+        if (isUuid(candVehicle) && isUuid(candOwner1) && candOwner1 === candOwner2) {
+          vehicleId = candVehicle;
+          ownerId = candOwner1;
+        }
+      } else {
+        // Tentative de normalisation générique: prendre les 2 premiers UUIDs après le premier segment "notifcar"
+        const uuidCandidates = parts.slice(1).filter(isUuid);
+        if (uuidCandidates.length >= 2) {
+          vehicleId = uuidCandidates[0];
+          ownerId = uuidCandidates[1];
+        }
+      }
+
+      if (!vehicleId || !ownerId) {
+        console.log('Impossible d\'extraire vehicleId/ownerId');
         return { isValid: false };
       }
 
-      const [, vehicleId, ownerId] = parts;
+      console.log('Vehicle ID extrait:', vehicleId);
+      console.log('Owner ID extrait:', ownerId);
       
       return {
         isValid: true,

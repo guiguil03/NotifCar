@@ -29,7 +29,7 @@ export default function VehiclesScreen() {
 
   useEffect(() => {
     loadVehicles();
-  }, [loadVehicles]);
+  }, []);
 
   const loadVehicles = useCallback(async () => {
     try {
@@ -130,24 +130,9 @@ export default function VehiclesScreen() {
   };
 
   const onQRGenerated = async (qrData: VehicleQRData) => {
-    if (selectedVehicle) {
-      try {
-        // Lier le QR code au véhicule en base
-        await VehicleService.linkQRCodeToVehicle(selectedVehicle.id, qrData.vehicleId);
-        
-        // Mettre à jour l'état local
-        const updatedVehicles = vehicles.map(v => 
-          v.id === selectedVehicle.id 
-            ? { ...v, qrCodeId: qrData.vehicleId }
-            : v
-        );
-        setVehicles(updatedVehicles);
-        setSelectedVehicle({ ...selectedVehicle, qrCodeId: qrData.vehicleId });
-      } catch (error) {
-        console.error('Erreur liaison QR code:', error);
-        Alert.alert('Erreur', 'Impossible de lier le QR code au véhicule');
-      }
-    }
+    console.log('QR code généré:', qrData);
+    // Le QR code est maintenant directement stocké en base lors de la création du véhicule
+    // Pas besoin de le lier séparément
   };
 
   const printQRCode = async (vehicle: Vehicle) => {
@@ -276,6 +261,7 @@ export default function VehiclesScreen() {
               ownerId: user?.id || 'unknown',
               type: 'notifcar',
             }}
+            qrCodeFromDB={selectedVehicle.qr_code}
             onQRGenerated={onQRGenerated}
           />
         </ScrollView>

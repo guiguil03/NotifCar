@@ -1,17 +1,26 @@
+import { QRDebugger } from '@/components/dev/QRDebugger';
 import { ThemedText } from '@/components/ThemedText';
 import { VioletButton } from '@/components/ui/VioletButton';
+import { useChat } from '@/contexts/ChatContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { QRCodeService } from '@/lib/qrCodeService';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
-import { Alert, Animated, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Keyboard, Modal, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [scannedVehicleId, setScannedVehicleId] = useState<string | null>(null);
+  const [messageText, setMessageText] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [showQRDebugger, setShowQRDebugger] = useState(false);
+  
+  const { createConversationFromQR } = useChat();
   
   const primaryColor = useThemeColor({}, 'primary');
   // const secondaryColor = useThemeColor({}, 'secondary');
@@ -69,40 +78,30 @@ export default function ScanScreen() {
     
     setScanned(true);
     
+    // Logs de débogage pour voir ce qui est scanné
+    console.log('=== SCAN QR CODE ===');
+    console.log('Type:', type);
+    console.log('Data scannée:', data);
+    console.log('Type de data:', typeof data);
+    console.log('Longueur:', data.length);
+    console.log('Commence par notifcar:', data.startsWith('notifcar:'));
+    console.log('Parties après split:', data.split(':'));
+    console.log('========================');
+    
     // Validation du QR code avec le service
     const validation = QRCodeService.validateQRCode(data);
     
+    console.log('Résultat validation:', validation);
+    
     if (validation.isValid && validation.vehicleId && validation.ownerId) {
-      Alert.alert(
-        'QR Code NotifCar détecté !',
-        `Véhicule ID: ${validation.vehicleId}\nPropriétaire: ${validation.ownerId}\n\nQue souhaitez-vous faire ?`,
-        [
-          {
-            text: 'Annuler',
-            style: 'cancel',
-            onPress: () => setScanned(false),
-          },
-          {
-            text: 'Notifier',
-            onPress: () => {
-              Alert.alert(
-                'Notification envoyée !',
-                'Le propriétaire du véhicule a été notifié de votre message.',
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => setScanned(false),
-                  },
-                ]
-              );
-            },
-          },
-        ]
-      );
+      console.log('QR code valide, ouverture du modal');
+      setScannedVehicleId(data); // Stocker le QR code complet
+      setShowMessageModal(true);
     } else {
+      console.log('QR code invalide, affichage de l\'alerte');
       Alert.alert(
         'QR Code invalide',
-        'Ce QR code n\'est pas un code NotifCar valide.\n\nAssurez-vous de scanner un QR code généré par l\'application NotifCar.',
+        `Ce QR code n'est pas un code NotifCar valide.\n\nDonnées scannées: "${data}"\n\nAssurez-vous de scanner un QR code généré par l'application NotifCar.`,
         [
           {
             text: 'OK',
@@ -111,6 +110,44 @@ export default function ScanScreen() {
         ]
       );
     }
+  };
+
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !scannedVehicleId || sendingMessage) return;
+
+    setSendingMessage(true);
+    try {
+      const conversation = await createConversationFromQR(scannedVehicleId, messageText.trim());
+      
+      if (conversation) {
+        Alert.alert(
+          'Message envoyé !',
+          'Votre message a été envoyé au propriétaire du véhicule. Vous pouvez maintenant communiquer en privé.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setShowMessageModal(false);
+                setMessageText('');
+                setScannedVehicleId(null);
+                setScanned(false);
+              },
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible d\'envoyer le message. Veuillez réessayer.');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const handleCancelMessage = () => {
+    setShowMessageModal(false);
+    setMessageText('');
+    setScannedVehicleId(null);
+    setScanned(false);
   };
 
   if (!permission) {
@@ -189,8 +226,9 @@ export default function ScanScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+    <>
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000000" />
       
       <CameraView
         style={styles.camera}
@@ -323,11 +361,123 @@ export default function ScanScreen() {
                   </View>
                 </LinearGradient>
               </View>
+
+              {/* Bouton de débogage QR */}
+              <TouchableOpacity
+                style={styles.debugButtonMain}
+                onPress={() => setShowQRDebugger(true)}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#FF0000', '#FF4500', '#FF6B35']}
+                  style={styles.debugButtonGradient}
+                >
+                  <Ionicons name="bug" size={32} color="white" />
+                  <Text style={styles.debugButtonMainText}>🐛 DÉBOGUER QR CODE</Text>
+                  <Text style={styles.debugButtonSubText}>Corriger les QR codes défectueux</Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </Animated.View>
           </LinearGradient>
         </View>
       </CameraView>
-    </View>
+      </View>
+
+      {/* Modal pour envoyer un message */}
+    <Modal
+      visible={showMessageModal}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={handleCancelMessage}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={handleCancelMessage} style={styles.modalCloseButton}>
+              <Ionicons name="close" size={24} color="#6B7280" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Envoyer un message</Text>
+            <TouchableOpacity 
+              onPress={Keyboard.dismiss} 
+              style={styles.keyboardDismissButton}
+            >
+              <Ionicons name="chevron-down" size={20} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.modalContent}>
+            <View style={styles.messageInfo}>
+              <Ionicons name="car" size={24} color="#7C3AED" />
+              <Text style={styles.messageInfoText}>
+                Vous allez envoyer un message au propriétaire de ce véhicule
+              </Text>
+            </View>
+
+            <TextInput
+              style={styles.messageInput}
+              value={messageText}
+              onChangeText={setMessageText}
+              placeholder="Décrivez le problème ou laissez un message..."
+              multiline
+              maxLength={500}
+              textAlignVertical="top"
+              returnKeyType="default"
+              blurOnSubmit={false}
+            />
+
+            <View style={styles.characterCount}>
+              <Text style={styles.characterCountText}>
+                {messageText.length}/500
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCancelMessage}
+            >
+              <Text style={styles.cancelButtonText}>Annuler</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                (!messageText.trim() || sendingMessage) && styles.sendButtonDisabled
+              ]}
+              onPress={handleSendMessage}
+              disabled={!messageText.trim() || sendingMessage}
+            >
+              {sendingMessage ? (
+                <Text style={styles.sendButtonText}>Envoi...</Text>
+              ) : (
+                <Text style={styles.sendButtonText}>Envoyer</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+
+    {/* Modal de débogage QR */}
+    <Modal
+      visible={showQRDebugger}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setShowQRDebugger(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={() => setShowQRDebugger(false)} style={styles.modalCloseButton}>
+            <Ionicons name="close" size={24} color="#6B7280" />
+          </TouchableOpacity>
+          <Text style={styles.modalTitle}>Débogueur QR Code</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <QRDebugger />
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -566,5 +716,184 @@ const styles = StyleSheet.create({
   },
   permissionButton: {
     marginTop: 20,
+  },
+  // Styles pour le modal de message
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalCloseButton: {
+    padding: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  modalPlaceholder: {
+    width: 40,
+  },
+  keyboardDismissButton: {
+    padding: 8,
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  messageInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  messageInfoText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginLeft: 12,
+    flex: 1,
+  },
+  messageInput: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#1F2937',
+    minHeight: 120,
+    textAlignVertical: 'top',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  characterCount: {
+    alignItems: 'flex-end',
+    marginTop: 8,
+  },
+  characterCountText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  sendButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: '#7C3AED',
+    alignItems: 'center',
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#D1D5DB',
+  },
+  sendButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+  // Styles pour le bouton de test
+  testButton: {
+    marginTop: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  testButtonGradient: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  testButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+  debugButton: {
+    borderWidth: 2,
+    borderColor: '#FF4500',
+    shadowColor: '#FF4500',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  debugButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  debugButtonMain: {
+    width: '100%',
+    marginVertical: 10,
+    borderRadius: 12,
+    borderWidth: 3,
+    borderColor: '#FF0000',
+    shadowColor: '#FF0000',
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  debugButtonGradient: {
+    padding: 20,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  debugButtonMainText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+    marginTop: 8,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+  },
+  debugButtonSubText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 });

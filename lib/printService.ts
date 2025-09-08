@@ -9,7 +9,7 @@ export class PrintService {
    */
   static async generateQRCodePDF(qrData: QRCodeData): Promise<string> {
     // Utiliser l'API QR Server pour générer l'image du QR code
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData.qrString)}&format=png&color=000000&bgcolor=FFFFFF&margin=10&ecc=M`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData.qrString)}&format=png&color=000000&bgcolor=FFFFFF&margin=15&ecc=M&qzone=2`;
     
     const html = `
       <!DOCTYPE html>
@@ -66,15 +66,21 @@ export class PrintService {
             border: 2px dashed #E5E7EB;
           }
           .qr-image {
-            width: 200px;
-            height: 200px;
+            width: 250px;
+            height: 250px;
             margin: 0 auto 20px auto;
-            border: 2px solid #E5E7EB;
-            border-radius: 10px;
+            border: 3px solid #E5E7EB;
+            border-radius: 15px;
             background: white;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+          }
+          .qr-image img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 10px;
           }
           .qr-code {
             font-family: monospace;
@@ -139,7 +145,8 @@ export class PrintService {
           
           <div class="qr-container">
             <div class="qr-image">
-              <img src="${qrCodeUrl}" alt="QR Code" style="max-width: 100%; max-height: 100%;" />
+              <img src="${qrCodeUrl}" alt="QR Code NotifCar" style="max-width: 100%; max-height: 100%;" 
+                   onerror="this.parentNode.innerHTML='<div style=\'color: #DC2626; font-size: 14px;\'>Erreur de chargement du QR Code</div><div style=\'font-family: monospace; font-size: 12px; margin-top: 10px; word-break: break-all;\'>${qrData.qrString}</div>';" />
             </div>
             <div class="qr-code">${qrData.qrString}</div>
           </div>

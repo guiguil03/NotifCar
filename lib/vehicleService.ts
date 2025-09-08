@@ -1,3 +1,4 @@
+import { QRCodeService } from './qrCodeService';
 import { supabase } from './supabase';
 
 export interface Vehicle {
@@ -27,21 +28,25 @@ export class VehicleService {
       // Générer un nom à partir de brand + model si pas fourni
       const vehicleName = vehicleData.name || `${vehicleData.brand} ${vehicleData.model}`;
       
-      const vehicleId = this.generateVehicleId();
-      const qrCodeId = vehicleData.qrCodeId || this.generateVehicleId(); // Générer un UUID unique
+      // Générer le QR code avec QRCodeService
+      const { qrString, vehicleId } = QRCodeService.generateVehicleQRCode({
+        vehicleName: vehicleData.name || `${vehicleData.brand} ${vehicleData.model}`,
+        ownerId: vehicleData.ownerId,
+        type: 'notifcar'
+      });
       
       const { data, error } = await supabase
         .from('vehicles')
         .insert({
           id: vehicleId,
-          user_id: vehicleData.ownerId,
+          owner_id: vehicleData.ownerId,
           brand: vehicleData.brand,
           model: vehicleData.model,
           year: vehicleData.year,
           license_plate: vehicleData.licensePlate,
           color: vehicleData.color || null,
           notes: vehicleData.notes || null,
-          qr_code: qrCodeId, // Utiliser l'UUID unique
+          qr_code: qrString, // Utiliser le QR code généré par QRCodeService
           is_active: vehicleData.isActive ?? true,
         })
         .select()
@@ -63,7 +68,7 @@ export class VehicleService {
         licensePlate: data.license_plate,
         color: data.color,
         notes: data.notes,
-        ownerId: data.user_id,
+        ownerId: data.owner_id,
         qrCodeId: data.qr_code,
         isActive: data.is_active,
         createdAt: data.created_at,
@@ -85,7 +90,7 @@ export class VehicleService {
       const { data, error } = await supabase
         .from('vehicles')
         .select('*')
-        .eq('user_id', ownerId)
+        .eq('owner_id', ownerId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -104,7 +109,7 @@ export class VehicleService {
         licensePlate: item.license_plate,
         color: item.color,
         notes: item.notes,
-        ownerId: item.user_id,
+        ownerId: item.owner_id,
         qrCodeId: item.qr_code,
         isActive: item.is_active,
         createdAt: item.created_at,
@@ -155,7 +160,7 @@ export class VehicleService {
         licensePlate: data.license_plate,
         color: data.color,
         notes: data.notes,
-        ownerId: data.user_id,
+        ownerId: data.owner_id,
         qrCodeId: data.qr_code,
         isActive: data.is_active,
         createdAt: data.created_at,
@@ -210,14 +215,4 @@ export class VehicleService {
     }
   }
 
-  /**
-   * Génère un ID unique pour le véhicule (UUID v4)
-   */
-  static generateVehicleId(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  }
 }

@@ -11,10 +11,11 @@ import { Alert, Share, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface QRCodeGeneratorProps {
   vehicleData: Omit<VehicleQRData, 'vehicleId' | 'createdAt'>;
+  qrCodeFromDB?: string; // QR code stocké en base de données
   onQRGenerated?: (qrData: VehicleQRData) => void;
 }
 
-export function QRCodeGenerator({ vehicleData, onQRGenerated }: QRCodeGeneratorProps) {
+export function QRCodeGenerator({ vehicleData, qrCodeFromDB, onQRGenerated }: QRCodeGeneratorProps) {
   const [qrString, setQrString] = useState<string | null>(null);
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -37,18 +38,17 @@ export function QRCodeGenerator({ vehicleData, onQRGenerated }: QRCodeGeneratorP
     
     setIsGenerating(true);
     try {
-      const { qrString: generatedQrString, vehicleId: generatedVehicleId } = QRCodeService.generateVehicleQRCode(vehicleData);
-      setQrString(generatedQrString);
-      setVehicleId(generatedVehicleId);
-      
-      // Notifier le parent que le QR code a été généré
-      if (onQRGenerated) {
-        const qrData: VehicleQRData = {
-          ...vehicleData,
-          vehicleId: generatedVehicleId,
-          createdAt: new Date().toISOString(),
-        };
-        onQRGenerated(qrData);
+      // Utiliser le QR code de la base de données s'il est fourni
+      if (qrCodeFromDB) {
+        setQrString(qrCodeFromDB);
+        // Extraire l'ID du véhicule du QR code
+        const parts = qrCodeFromDB.split(':');
+        setVehicleId(parts[1] || 'unknown');
+      } else {
+        // Sinon, générer un nouveau QR code
+        const result = QRCodeService.generateVehicleQRCode(vehicleData);
+        setQrString(result.qrString);
+        setVehicleId(result.vehicleId);
       }
     } catch (error) {
       Alert.alert('Erreur', 'Impossible de générer le QR code');
@@ -56,7 +56,7 @@ export function QRCodeGenerator({ vehicleData, onQRGenerated }: QRCodeGeneratorP
     } finally {
       setIsGenerating(false);
     }
-  }, [vehicleData, onQRGenerated, qrString]);
+  }, [qrCodeFromDB, vehicleData, qrString]);
 
   useEffect(() => {
     if (!qrString) {
