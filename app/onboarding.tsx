@@ -1,5 +1,7 @@
 import { ThemedText } from '@/components/ThemedText';
+import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { VehicleService } from '@/lib/vehicleService';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -9,6 +11,7 @@ import { Alert, Animated, Dimensions, KeyboardAvoidingView, Platform, ScrollView
 const { width, height } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [vehicleData, setVehicleData] = useState({
     brand: '',
@@ -16,6 +19,7 @@ export default function OnboardingScreen() {
     licensePlate: '',
   });
   const [loading, setLoading] = useState(false);
+  const [generatedQRCode, setGeneratedQRCode] = useState<string>('');
 
   const primaryColor = useThemeColor({}, 'primary');
   const secondaryColor = useThemeColor({}, 'secondary');
@@ -50,7 +54,11 @@ export default function OnboardingScreen() {
   }, [step, fadeAnim, slideAnim, progressAnim]);
 
   const generateQRCode = (licensePlate: string) => {
-    return `notifcar:veh_${licensePlate.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}`;
+    // Nettoyer la plaque d'immatriculation
+    const cleanPlate = licensePlate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    // Générer un ID unique basé sur la plaque et un timestamp
+    const timestamp = Date.now().toString(36);
+    return `notifcar:${cleanPlate}:${timestamp}`;
   };
 
   const handleNext = () => {
@@ -59,6 +67,9 @@ export default function OnboardingScreen() {
         Alert.alert('Erreur', 'Veuillez remplir tous les champs');
         return;
       }
+      // Générer le QR code pour l'étape 2
+      const qrCode = generateQRCode(vehicleData.licensePlate);
+      setGeneratedQRCode(qrCode);
       setStep(2);
     } else if (step === 2) {
       setStep(3);
@@ -72,14 +83,52 @@ export default function OnboardingScreen() {
   };
 
   const handleComplete = async () => {
+    if (!user?.id) {
+      Alert.alert('Erreur', 'Utilisateur non connecté');
+      return;
+    }
+
     setLoading(true);
     
-    // Simulation de la sauvegarde du véhicule
-    setTimeout(() => {
-      setLoading(false);
-      // Redirection directe vers l'application principale
-      router.replace('/(tabs)');
-    }, 2000);
+    try {
+      // Créer le véhicule en base de données
+      const vehicle = await VehicleService.createVehicle({
+        name: `${vehicleData.brand} ${vehicleData.model}`,
+        brand: vehicleData.brand,
+        model: vehicleData.model,
+        year: new Date().getFullYear(), // Année actuelle par défaut
+        licensePlate: vehicleData.licensePlate,
+        ownerId: user.id,
+        isActive: true,
+      });
+
+      if (vehicle) {
+        Alert.alert(
+          'Succès !',
+          'Votre véhicule a été ajouté avec succès. Vous pouvez maintenant utiliser Notifcar !',
+          [
+            {
+              text: 'Continuer',
+              onPress: () => router.replace('/(tabs)'),
+            },
+          ]
+        );
+      } else {
+        throw new Error('Erreur lors de la création du véhicule');
+      }
+    } catch (error: any) {
+      console.error('Erreur création véhicule:', error);
+      Alert.alert(
+        'Erreur',
+        error.message || 'Impossible de créer le véhicule. Veuillez réessayer.',
+        [
+          {
+            text: 'Réessayer',
+            onPress: () => setLoading(false),
+          },
+        ]
+      );
+    }
   };
 
   const renderStep1 = () => (
@@ -93,55 +142,91 @@ export default function OnboardingScreen() {
       ]}
     >
       <View style={styles.stepHeader}>
-        <View style={[styles.stepIcon, { backgroundColor: primaryColor }]}>
-          <Ionicons name="car" size={24} color="white" />
-        </View>
-        <ThemedText style={styles.stepTitle}>Ajoutez votre véhicule</ThemedText>
+        <LinearGradient
+          colors={['#7C3AED', '#5B21B6']}
+          style={styles.stepIconGradient}
+        >
+          <Ionicons name="car-sport" size={32} color="white" />
+        </LinearGradient>
+        <ThemedText style={styles.stepTitle}>Votre véhicule</ThemedText>
         <ThemedText style={styles.stepDescription}>
-          Renseignez les informations de votre véhicule pour commencer
+          Renseignez les informations de votre véhicule pour commencer à utiliser Notifcar
         </ThemedText>
       </View>
 
-      <View style={styles.formContainer}>
-        <View style={styles.inputWrapper}>
-          <View style={styles.inputIcon}>
-            <Ionicons name="car-sport" size={20} color={primaryColor} />
+      <View style={styles.formCard}>
+        <LinearGradient
+          colors={['#FFFFFF', '#F8FAFC']}
+          style={styles.formGradient}
+        >
+          <View style={styles.formHeader}>
+            <Ionicons name="information-circle" size={24} color="#7C3AED" />
+            <ThemedText style={styles.formTitle}>Informations du véhicule</ThemedText>
+            <ThemedText style={styles.formSubtitle}>
+              Ces informations permettront d'identifier votre véhicule
+            </ThemedText>
           </View>
-          <TextInput
-            style={styles.input}
-            placeholder="Marque (ex: Renault)"
-            placeholderTextColor="#9CA3AF"
-            value={vehicleData.brand}
-            onChangeText={(text) => setVehicleData({ ...vehicleData, brand: text })}
-          />
-        </View>
 
-        <View style={styles.inputWrapper}>
-          <View style={styles.inputIcon}>
-            <Ionicons name="car-sport" size={20} color={primaryColor} />
-          </View>
-          <TextInput
-            style={styles.input}
-            placeholder="Modèle (ex: Clio)"
-            placeholderTextColor="#9CA3AF"
-            value={vehicleData.model}
-            onChangeText={(text) => setVehicleData({ ...vehicleData, model: text })}
-          />
-        </View>
+          <View style={styles.formContainer}>
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>Marque du véhicule</ThemedText>
+              <View style={styles.inputWrapper}>
+                <View style={styles.inputIcon}>
+                  <Ionicons name="car-sport" size={20} color="#7C3AED" />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ex: Renault, Peugeot, BMW..."
+                  placeholderTextColor="#9CA3AF"
+                  value={vehicleData.brand}
+                  onChangeText={(text) => setVehicleData({ ...vehicleData, brand: text })}
+                  autoCapitalize="words"
+                />
+              </View>
+            </View>
 
-        <View style={styles.inputWrapper}>
-          <View style={styles.inputIcon}>
-            <Ionicons name="card" size={20} color={primaryColor} />
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>Modèle du véhicule</ThemedText>
+              <View style={styles.inputWrapper}>
+                <View style={styles.inputIcon}>
+                  <Ionicons name="car" size={20} color="#7C3AED" />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ex: Clio, 308, X3..."
+                  placeholderTextColor="#9CA3AF"
+                  value={vehicleData.model}
+                  onChangeText={(text) => setVehicleData({ ...vehicleData, model: text })}
+                  autoCapitalize="words"
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>Plaque d'immatriculation</ThemedText>
+              <View style={styles.inputWrapper}>
+                <View style={styles.inputIcon}>
+                  <Ionicons name="card" size={20} color="#7C3AED" />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ex: AB-123-CD"
+                  placeholderTextColor="#9CA3AF"
+                  value={vehicleData.licensePlate}
+                  onChangeText={(text) => setVehicleData({ ...vehicleData, licensePlate: text.toUpperCase() })}
+                  autoCapitalize="characters"
+                />
+              </View>
+            </View>
           </View>
-          <TextInput
-            style={styles.input}
-            placeholder="Plaque d'immatriculation"
-            placeholderTextColor="#9CA3AF"
-            value={vehicleData.licensePlate}
-            onChangeText={(text) => setVehicleData({ ...vehicleData, licensePlate: text.toUpperCase() })}
-            autoCapitalize="characters"
-          />
-        </View>
+
+          <View style={styles.infoBox}>
+            <Ionicons name="shield-checkmark" size={20} color="#10B981" />
+            <ThemedText style={styles.infoText}>
+              Vos informations sont sécurisées et ne seront utilisées que pour identifier votre véhicule
+            </ThemedText>
+          </View>
+        </LinearGradient>
       </View>
     </Animated.View>
   );
@@ -175,7 +260,7 @@ export default function OnboardingScreen() {
             <Ionicons name="qr-code" size={80} color={primaryColor} />
           </View>
           <ThemedText style={styles.qrCodeText}>
-            {generateQRCode(vehicleData.licensePlate)}
+            {generatedQRCode}
           </ThemedText>
           <ThemedText style={styles.qrCodeDescription}>
             Collez ce QR code sur le pare-brise de votre véhicule
@@ -352,7 +437,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 80,
+    paddingTop: 120,
     paddingBottom: 40,
   },
   header: {
@@ -399,6 +484,19 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
+  stepIconGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
   stepTitle: {
     fontSize: 28,
     fontWeight: '700',
@@ -416,8 +514,49 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: '500',
   },
+  formCard: {
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 12,
+    marginBottom: 20,
+  },
+  formGradient: {
+    padding: 24,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  formHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  formTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  formSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   formContainer: {
-    gap: 20,
+    gap: 24,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginLeft: 4,
   },
   inputWrapper: {
     position: 'relative',
@@ -429,19 +568,37 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   input: {
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
     borderRadius: 16,
     padding: 16,
     paddingLeft: 52,
     fontSize: 16,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    color: 'white',
+    backgroundColor: '#FFFFFF',
+    color: '#1F2937',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    marginTop: 16,
+    gap: 12,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#166534',
+    lineHeight: 20,
+    fontWeight: '500',
   },
   qrCodeContainer: {
     alignItems: 'center',

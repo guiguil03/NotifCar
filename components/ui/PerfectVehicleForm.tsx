@@ -1,8 +1,9 @@
 import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useRef, useState } from 'react';
+import { Alert, Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 export interface VehicleFormData {
   name?: string;
@@ -38,6 +39,44 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
   const primaryColor = useThemeColor({}, 'primary');
   const gradientStart = useThemeColor({}, 'gradientStart');
   const gradientEnd = useThemeColor({}, 'gradientEnd');
+
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const cardAnimations = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
+
+  React.useEffect(() => {
+    // Animation d'entrée
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Animation des cartes
+    const animations = cardAnimations.map((anim, index) =>
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 600,
+        delay: index * 100,
+        useNativeDriver: true,
+      })
+    );
+    Animated.stagger(100, animations).start();
+  }, []);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<VehicleFormData> = {};
@@ -97,64 +136,112 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header simple */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View style={styles.headerIcon}>
-              <Ionicons name="car" size={28} color="#3B82F6" />
+        {/* Header avec gradient violet */}
+        <Animated.View
+          style={[
+            styles.header,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
+          <LinearGradient
+            colors={['#7C3AED', '#5B21B6', '#4C1D95']}
+            style={styles.headerGradient}
+          >
+            <View style={styles.headerIconContainer}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.headerIconGradient}
+              >
+                <Ionicons name="car-sport" size={32} color="#7C3AED" />
+              </LinearGradient>
             </View>
-            <View style={styles.headerText}>
-              <ThemedText style={styles.title}>{title}</ThemedText>
-              <ThemedText style={styles.subtitle}>
-                Renseignez les informations de votre véhicule
-              </ThemedText>
-            </View>
-          </View>
-        </View>
+            <ThemedText style={styles.headerTitle}>{title}</ThemedText>
+            <ThemedText style={styles.headerSubtitle}>
+              Renseignez les informations de votre véhicule
+            </ThemedText>
+          </LinearGradient>
+        </Animated.View>
 
-        {/* Formulaire */}
+        {/* Formulaire avec cartes animées */}
         <View style={styles.formContainer}>
-          <View style={styles.formCard}>
-            {/* Nom du véhicule */}
-            <View style={styles.inputGroup}>
-              <View style={styles.labelContainer}>
-                <View style={styles.iconContainer}>
-                  <Ionicons name="car-outline" size={18} color="#3B82F6" />
+          {/* Nom du véhicule */}
+          <Animated.View
+            style={[
+              styles.formCard,
+              {
+                opacity: cardAnimations[0],
+                transform: [{
+                  translateY: cardAnimations[0].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [30, 0],
+                  })
+                }]
+              }
+            ]}
+          >
+            <LinearGradient
+              colors={['#FFFFFF', '#F8FAFC']}
+              style={styles.cardGradient}
+            >
+              <View style={styles.inputHeader}>
+                <View style={styles.inputIconContainer}>
+                  <Ionicons name="car-outline" size={20} color="#7C3AED" />
                 </View>
-                <ThemedText style={styles.label}>Nom du véhicule (optionnel)</ThemedText>
+                <ThemedText style={styles.inputLabel}>Nom du véhicule (optionnel)</ThemedText>
               </View>
               <TextInput
-                style={styles.input}
+                style={styles.modernInput}
                 value={formData.name || ''}
                 onChangeText={(value) => updateField('name', value)}
                 placeholder="Ex: Ma voiture principale"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor="#9CA3AF"
                 autoCorrect={false}
                 autoCapitalize="words"
                 returnKeyType="next"
               />
-            </View>
+            </LinearGradient>
+          </Animated.View>
 
-            {/* Marque et Modèle */}
-            <View style={styles.row}>
-              <View style={styles.halfWidth}>
-                <View style={styles.labelContainer}>
-                  <View style={styles.iconContainer}>
-                    <Ionicons name="business" size={18} color="#3B82F6" />
+          {/* Marque et Modèle */}
+          <View style={styles.rowContainer}>
+            <Animated.View
+              style={[
+                styles.halfCard,
+                {
+                  opacity: cardAnimations[1],
+                  transform: [{
+                    translateY: cardAnimations[1].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [30, 0],
+                    })
+                  }]
+                }
+              ]}
+            >
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.cardGradient}
+              >
+                <View style={styles.inputHeader}>
+                  <View style={styles.inputIconContainer}>
+                    <Ionicons name="business" size={20} color="#7C3AED" />
                   </View>
-                  <ThemedText style={styles.label}>
+                  <ThemedText style={styles.inputLabel}>
                     Marque <ThemedText style={styles.required}>*</ThemedText>
                   </ThemedText>
                 </View>
                 <TextInput
                   style={[
-                    styles.input,
+                    styles.modernInput,
                     errors.brand && styles.inputError
                   ]}
                   value={formData.brand}
                   onChangeText={(value) => updateField('brand', value)}
-                  placeholder="Ex: BMW"
-                  placeholderTextColor="#6B7280"
+                  placeholder="Ex: BMW, Renault..."
+                  placeholderTextColor="#9CA3AF"
                   autoCorrect={false}
                   autoCapitalize="words"
                   returnKeyType="next"
@@ -162,25 +249,44 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 {errors.brand && (
                   <ThemedText style={styles.errorText}>{errors.brand}</ThemedText>
                 )}
-              </View>
-              <View style={styles.halfWidth}>
-                <View style={styles.labelContainer}>
-                  <View style={styles.iconContainer}>
-                    <Ionicons name="car-sport" size={18} color="#3B82F6" />
+              </LinearGradient>
+            </Animated.View>
+
+            <Animated.View
+              style={[
+                styles.halfCard,
+                {
+                  opacity: cardAnimations[1],
+                  transform: [{
+                    translateY: cardAnimations[1].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [30, 0],
+                    })
+                  }]
+                }
+              ]}
+            >
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.cardGradient}
+              >
+                <View style={styles.inputHeader}>
+                  <View style={styles.inputIconContainer}>
+                    <Ionicons name="car-sport" size={20} color="#7C3AED" />
                   </View>
-                  <ThemedText style={styles.label}>
+                  <ThemedText style={styles.inputLabel}>
                     Modèle <ThemedText style={styles.required}>*</ThemedText>
                   </ThemedText>
                 </View>
                 <TextInput
                   style={[
-                    styles.input,
+                    styles.modernInput,
                     errors.model && styles.inputError
                   ]}
                   value={formData.model}
                   onChangeText={(value) => updateField('model', value)}
-                  placeholder="Ex: M3"
-                  placeholderTextColor="#6B7280"
+                  placeholder="Ex: M3, Clio..."
+                  placeholderTextColor="#9CA3AF"
                   autoCorrect={false}
                   autoCapitalize="words"
                   returnKeyType="next"
@@ -188,23 +294,41 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 {errors.model && (
                   <ThemedText style={styles.errorText}>{errors.model}</ThemedText>
                 )}
-              </View>
-            </View>
+              </LinearGradient>
+            </Animated.View>
+          </View>
 
-            {/* Année et Plaque */}
-            <View style={styles.row}>
-              <View style={styles.halfWidth}>
-                <View style={styles.labelContainer}>
-                  <View style={styles.iconContainer}>
-                    <Ionicons name="calendar" size={18} color="#3B82F6" />
+          {/* Année et Plaque */}
+          <View style={styles.rowContainer}>
+            <Animated.View
+              style={[
+                styles.halfCard,
+                {
+                  opacity: cardAnimations[2],
+                  transform: [{
+                    translateY: cardAnimations[2].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [30, 0],
+                    })
+                  }]
+                }
+              ]}
+            >
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.cardGradient}
+              >
+                <View style={styles.inputHeader}>
+                  <View style={styles.inputIconContainer}>
+                    <Ionicons name="calendar" size={20} color="#7C3AED" />
                   </View>
-                  <ThemedText style={styles.label}>
+                  <ThemedText style={styles.inputLabel}>
                     Année <ThemedText style={styles.required}>*</ThemedText>
                   </ThemedText>
                 </View>
                 <TextInput
                   style={[
-                    styles.input,
+                    styles.modernInput,
                     errors.year && styles.inputError
                   ]}
                   value={formData.year.toString()}
@@ -213,7 +337,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                     updateField('year', yearValue);
                   }}
                   placeholder="2024"
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor="#9CA3AF"
                   keyboardType="numeric"
                   autoCorrect={false}
                   returnKeyType="next"
@@ -221,25 +345,44 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 {errors.year && (
                   <ThemedText style={styles.errorText}>{errors.year}</ThemedText>
                 )}
-              </View>
-              <View style={styles.halfWidth}>
-                <View style={styles.labelContainer}>
-                  <View style={styles.iconContainer}>
-                    <Ionicons name="card" size={18} color="#3B82F6" />
+              </LinearGradient>
+            </Animated.View>
+
+            <Animated.View
+              style={[
+                styles.halfCard,
+                {
+                  opacity: cardAnimations[2],
+                  transform: [{
+                    translateY: cardAnimations[2].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [30, 0],
+                    })
+                  }]
+                }
+              ]}
+            >
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.cardGradient}
+              >
+                <View style={styles.inputHeader}>
+                  <View style={styles.inputIconContainer}>
+                    <Ionicons name="card" size={20} color="#7C3AED" />
                   </View>
-                  <ThemedText style={styles.label}>
+                  <ThemedText style={styles.inputLabel}>
                     Plaque <ThemedText style={styles.required}>*</ThemedText>
                   </ThemedText>
                 </View>
                 <TextInput
                   style={[
-                    styles.input,
+                    styles.modernInput,
                     errors.licensePlate && styles.inputError
                   ]}
                   value={formData.licensePlate}
                   onChangeText={(value) => updateField('licensePlate', value)}
                   placeholder="AB-123-CD"
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor="#9CA3AF"
                   autoCorrect={false}
                   autoCapitalize="characters"
                   returnKeyType="next"
@@ -247,61 +390,115 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 {errors.licensePlate && (
                   <ThemedText style={styles.errorText}>{errors.licensePlate}</ThemedText>
                 )}
-              </View>
-            </View>
+              </LinearGradient>
+            </Animated.View>
+          </View>
 
-            {/* Couleur */}
-            <View style={styles.inputGroup}>
-              <View style={styles.labelContainer}>
-                <View style={styles.iconContainer}>
-                  <Ionicons name="color-palette" size={18} color="#3B82F6" />
+          {/* Couleur */}
+          <Animated.View
+            style={[
+              styles.formCard,
+              {
+                opacity: cardAnimations[3],
+                transform: [{
+                  translateY: cardAnimations[3].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [30, 0],
+                  })
+                }]
+              }
+            ]}
+          >
+            <LinearGradient
+              colors={['#FFFFFF', '#F8FAFC']}
+              style={styles.cardGradient}
+            >
+              <View style={styles.inputHeader}>
+                <View style={styles.inputIconContainer}>
+                  <Ionicons name="color-palette" size={20} color="#7C3AED" />
                 </View>
-                <ThemedText style={styles.label}>Couleur</ThemedText>
+                <ThemedText style={styles.inputLabel}>Couleur</ThemedText>
               </View>
               <TextInput
-                style={styles.input}
+                style={styles.modernInput}
                 value={formData.color || ''}
                 onChangeText={(value) => updateField('color', value)}
                 placeholder="Ex: Bleu, Noir, Blanc..."
-                placeholderTextColor="#6B7280"
+                placeholderTextColor="#9CA3AF"
                 autoCorrect={false}
                 autoCapitalize="words"
                 returnKeyType="next"
               />
-            </View>
+            </LinearGradient>
+          </Animated.View>
 
-            {/* Notes */}
-            <View style={styles.inputGroup}>
-              <View style={styles.labelContainer}>
-                <View style={styles.iconContainer}>
-                  <Ionicons name="document-text" size={18} color="#3B82F6" />
+          {/* Notes */}
+          <Animated.View
+            style={[
+              styles.formCard,
+              {
+                opacity: cardAnimations[4],
+                transform: [{
+                  translateY: cardAnimations[4].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [30, 0],
+                  })
+                }]
+              }
+            ]}
+          >
+            <LinearGradient
+              colors={['#FFFFFF', '#F8FAFC']}
+              style={styles.cardGradient}
+            >
+              <View style={styles.inputHeader}>
+                <View style={styles.inputIconContainer}>
+                  <Ionicons name="document-text" size={20} color="#7C3AED" />
                 </View>
-                <ThemedText style={styles.label}>Notes</ThemedText>
+                <ThemedText style={styles.inputLabel}>Notes</ThemedText>
               </View>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={[styles.modernInput, styles.textArea]}
                 value={formData.notes || ''}
                 onChangeText={(value) => updateField('notes', value)}
                 placeholder="Informations supplémentaires..."
-                placeholderTextColor="#6B7280"
+                placeholderTextColor="#9CA3AF"
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
                 autoCorrect={false}
                 returnKeyType="done"
               />
-            </View>
-          </View>
+            </LinearGradient>
+          </Animated.View>
 
-          {/* Boutons d'action - Fixés en bas */}
-          <View style={styles.actionsContainer}>
+          {/* Boutons d'action avec animations */}
+          <Animated.View
+            style={[
+              styles.actionsContainer,
+              {
+                opacity: cardAnimations[4],
+                transform: [{
+                  translateY: cardAnimations[4].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [30, 0],
+                  })
+                }]
+              }
+            ]}
+          >
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={onCancel}
               disabled={isSubmitting}
             >
-              <Ionicons name="close" size={18} color="#6B7280" />
-              <ThemedText style={styles.cancelButtonText}>Annuler</ThemedText>
+              <LinearGradient
+                colors={['#F3F4F6', '#E5E7EB']}
+                style={styles.cancelButtonGradient}
+              >
+                <Ionicons name="close" size={20} color="#6B7280" />
+                <ThemedText style={styles.cancelButtonText}>Annuler</ThemedText>
+              </LinearGradient>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -309,16 +506,26 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
               onPress={handleSubmit}
               disabled={isSubmitting}
             >
-              {isSubmitting ? (
-                <Ionicons name="hourglass" size={18} color="white" />
-              ) : (
-                <Ionicons name="checkmark" size={18} color="white" />
-              )}
-              <ThemedText style={styles.submitButtonText}>
-                {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
-              </ThemedText>
+              <LinearGradient
+                colors={isSubmitting ? ['#9CA3AF', '#6B7280'] : ['#7C3AED', '#5B21B6']}
+                style={styles.submitButtonGradient}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Ionicons name="refresh" size={20} color="white" />
+                    <ThemedText style={styles.submitButtonText}>Ajout en cours...</ThemedText>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={20} color="white" />
+                    <ThemedText style={styles.submitButtonText}>
+                      {initialData ? 'Mettre à jour' : 'Ajouter le véhicule'}
+                    </ThemedText>
+                  </>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -336,12 +543,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    backgroundColor: 'white',
-    paddingTop: 20,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    marginBottom: 24,
   },
   headerContent: {
     flexDirection: 'row',
@@ -377,14 +579,13 @@ const styles = StyleSheet.create({
   },
   formCard: {
     backgroundColor: 'white',
-    marginBottom: 30,
-    borderRadius: 12,
-    padding: 20,
+    marginBottom: 20,
+    borderRadius: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -498,5 +699,114 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: 'white',
+  },
+  // Nouveaux styles modernes
+  headerGradient: {
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  headerIconContainer: {
+    marginBottom: 20,
+  },
+  headerIconGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 8,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    lineHeight: 24,
+    fontWeight: '500',
+  },
+  // Styles des cartes
+  cardGradient: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  inputHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  inputIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  modernInput: {
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    backgroundColor: '#FFFFFF',
+    color: '#1F2937',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  rowContainer: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 20,
+  },
+  halfCard: {
+    flex: 1,
+  },
+  cancelButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 8,
+  },
+  submitButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 8,
   },
 });

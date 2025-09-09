@@ -2,7 +2,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { PerfectVehicleForm as VehicleForm, VehicleFormData } from '@/components/ui/PerfectVehicleForm';
 import { QRCodeGenerator } from '@/components/ui/QRCodeGenerator';
 import { VioletButton } from '@/components/ui/VioletButton';
-import { VioletCard } from '@/components/ui/VioletCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { PrintService } from '@/lib/printService';
@@ -10,8 +9,8 @@ import { QRCodeService, VehicleQRData } from '@/lib/qrCodeService';
 import { Vehicle, VehicleService } from '@/lib/vehicleService';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, Animated, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function VehiclesScreen() {
   const { user } = useAuth();
@@ -21,25 +20,69 @@ export default function VehiclesScreen() {
   const [showQRGenerator, setShowQRGenerator] = useState(false);
   const [showVehicleForm, setShowVehicleForm] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const primaryColor = useThemeColor({}, 'primary');
   const gradientStart = useThemeColor({}, 'gradientStart');
   const gradientEnd = useThemeColor({}, 'gradientEnd');
   const successColor = useThemeColor({}, 'success');
 
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const cardAnimations = useRef<Animated.Value[]>([]).current;
+
   useEffect(() => {
     loadVehicles();
   }, []);
+
+  useEffect(() => {
+    // Animation d'entrée
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Animation des cartes
+    if (vehicles.length > 0 && cardAnimations.length > 0) {
+      const animations = cardAnimations.map((anim, index) =>
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 600,
+          delay: index * 100,
+          useNativeDriver: true,
+        })
+      );
+      Animated.stagger(100, animations).start();
+    }
+  }, [vehicles, fadeAnim, slideAnim]);
 
   const loadVehicles = useCallback(async () => {
     try {
       if (!user?.id) return;
       
+      setLoading(true);
       const userVehicles = await VehicleService.getUserVehicles(user.id);
       setVehicles(userVehicles);
+      
+      // Initialiser les animations des cartes
+      cardAnimations.length = 0;
+      userVehicles.forEach(() => {
+        cardAnimations.push(new Animated.Value(0));
+      });
     } catch (error) {
       console.error('Erreur chargement véhicules:', error);
       Alert.alert('Erreur', 'Impossible de charger les véhicules');
+    } finally {
+      setLoading(false);
     }
   }, [user?.id]);
 
@@ -294,30 +337,224 @@ export default function VehiclesScreen() {
         }
       >
           {vehicles.length === 0 ? (
-          <VioletCard variant="light" style={styles.emptyState}>
-            <Ionicons name="car-outline" size={64} color={primaryColor} />
-            <ThemedText style={styles.emptyTitle}>
-              Aucun véhicule
-            </ThemedText>
-            <ThemedText style={styles.emptySubtitle}>
-              Ajoutez votre premier véhicule pour commencer
-                </ThemedText>
-            <VioletButton
-              title="Ajouter un véhicule"
-              onPress={addVehicle}
-              variant="primary"
-              size="medium"
-                  style={styles.emptyButton}
-            />
-          </VioletCard>
+            <Animated.View
+              style={[
+                styles.emptyContainer,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }]
+                }
+              ]}
+            >
+              <ScrollView 
+                contentContainerStyle={styles.emptyScrollContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {/* Hero Section */}
+                <View style={styles.heroSection}>
+                  <LinearGradient
+                    colors={['#7C3AED', '#5B21B6', '#4C1D95']}
+                    style={styles.heroGradient}
+                  >
+                    <View style={styles.heroIconContainer}>
+                      <Animated.View
+                        style={[
+                          styles.heroIcon,
+                          {
+                            transform: [{
+                              scale: fadeAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.8, 1],
+                              })
+                            }]
+                          }
+                        ]}
+                      >
+                        <Ionicons name="car-sport" size={64} color="white" />
+                      </Animated.View>
+                    </View>
+                    
+                    <ThemedText style={styles.heroTitle}>
+                      Bienvenue sur Notifcar
+                    </ThemedText>
+                    <ThemedText style={styles.heroSubtitle}>
+                      Protégez votre véhicule avec notre système de signalisation intelligent
+                    </ThemedText>
+                  </LinearGradient>
+                </View>
+
+                {/* Features Section */}
+                <View style={styles.featuresSection}>
+                  <ThemedText style={styles.featuresTitle}>
+                    Pourquoi choisir Notifcar ?
+                  </ThemedText>
+                  
+                  <View style={styles.featuresGrid}>
+                    <View style={styles.featureCard}>
+                      <LinearGradient
+                        colors={['#F0FDF4', '#DCFCE7']}
+                        style={styles.featureGradient}
+                      >
+                        <View style={styles.featureIconContainer}>
+                          <Ionicons name="qr-code" size={32} color="#16A34A" />
+                        </View>
+                        <ThemedText style={styles.featureTitle}>QR Code Unique</ThemedText>
+                        <ThemedText style={styles.featureDescription}>
+                          Chaque véhicule reçoit un QR code personnalisé pour une identification rapide
+                        </ThemedText>
+                      </LinearGradient>
+                    </View>
+
+                    <View style={styles.featureCard}>
+                      <LinearGradient
+                        colors={['#EFF6FF', '#DBEAFE']}
+                        style={styles.featureGradient}
+                      >
+                        <View style={styles.featureIconContainer}>
+                          <Ionicons name="shield-checkmark" size={32} color="#2563EB" />
+                        </View>
+                        <ThemedText style={styles.featureTitle}>Protection 24/7</ThemedText>
+                        <ThemedText style={styles.featureDescription}>
+                          Surveillance continue de votre véhicule, jour et nuit
+                        </ThemedText>
+                      </LinearGradient>
+                    </View>
+
+                    <View style={styles.featureCard}>
+                      <LinearGradient
+                        colors={['#FDF4FF', '#F3E8FF']}
+                        style={styles.featureGradient}
+                      >
+                        <View style={styles.featureIconContainer}>
+                          <Ionicons name="notifications" size={32} color="#9333EA" />
+                        </View>
+                        <ThemedText style={styles.featureTitle}>Notifications Instantanées</ThemedText>
+                        <ThemedText style={styles.featureDescription}>
+                          Recevez des alertes immédiates en cas de problème avec votre véhicule
+                        </ThemedText>
+                      </LinearGradient>
+                    </View>
+
+                    <View style={styles.featureCard}>
+                      <LinearGradient
+                        colors={['#FFF7ED', '#FED7AA']}
+                        style={styles.featureGradient}
+                      >
+                        <View style={styles.featureIconContainer}>
+                          <Ionicons name="chatbubbles" size={32} color="#EA580C" />
+                        </View>
+                        <ThemedText style={styles.featureTitle}>Communication Directe</ThemedText>
+                        <ThemedText style={styles.featureDescription}>
+                          Échangez directement avec les personnes qui signalent un problème
+                        </ThemedText>
+                      </LinearGradient>
+                    </View>
+                  </View>
+                </View>
+
+                {/* How it Works Section */}
+                <View style={styles.howItWorksSection}>
+                  <ThemedText style={styles.howItWorksTitle}>
+                    Comment ça marche ?
+                  </ThemedText>
+                  
+                  <View style={styles.stepsContainer}>
+                    <View style={styles.stepItem}>
+                      <View style={styles.stepNumber}>
+                        <ThemedText style={styles.stepNumberText}>1</ThemedText>
+                      </View>
+                      <View style={styles.stepContent}>
+                        <ThemedText style={styles.stepTitle}>Ajoutez votre véhicule</ThemedText>
+                        <ThemedText style={styles.stepDescription}>
+                          Renseignez les informations de votre véhicule
+                        </ThemedText>
+                      </View>
+                    </View>
+
+                    <View style={styles.stepItem}>
+                      <View style={styles.stepNumber}>
+                        <ThemedText style={styles.stepNumberText}>2</ThemedText>
+                      </View>
+                      <View style={styles.stepContent}>
+                        <ThemedText style={styles.stepTitle}>Collez le QR code</ThemedText>
+                        <ThemedText style={styles.stepDescription}>
+                          Placez le QR code sur le pare-brise de votre véhicule
+                        </ThemedText>
+                      </View>
+                    </View>
+
+                    <View style={styles.stepItem}>
+                      <View style={styles.stepNumber}>
+                        <ThemedText style={styles.stepNumberText}>3</ThemedText>
+                      </View>
+                      <View style={styles.stepContent}>
+                        <ThemedText style={styles.stepTitle}>Recevez les alertes</ThemedText>
+                        <ThemedText style={styles.stepDescription}>
+                          Soyez notifié instantanément en cas de problème
+                        </ThemedText>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Call to Action */}
+                <View style={styles.ctaSection}>
+                  <LinearGradient
+                    colors={['#FFFFFF', '#F8FAFC']}
+                    style={styles.ctaCard}
+                  >
+                    <View style={styles.ctaIconContainer}>
+                      <LinearGradient
+                        colors={['#7C3AED', '#5B21B6']}
+                        style={styles.ctaIconGradient}
+                      >
+                        <Ionicons name="add-circle" size={32} color="white" />
+                      </LinearGradient>
+                    </View>
+                    
+                    <ThemedText style={styles.ctaTitle}>
+                      Prêt à commencer ?
+                    </ThemedText>
+                    <ThemedText style={styles.ctaSubtitle}>
+                      Ajoutez votre premier véhicule en quelques secondes
+                    </ThemedText>
+                    
+                    <VioletButton
+                      title="Ajouter mon véhicule"
+                      onPress={addVehicle}
+                      variant="primary"
+                      size="large"
+                      style={styles.ctaButton}
+                    />
+                  </LinearGradient>
+                </View>
+              </ScrollView>
+            </Animated.View>
         ) : (
-          vehicles.map((vehicle) => (
-            <View key={vehicle.id} style={styles.vehicleCard}>
+          vehicles.map((vehicle, index) => (
+            <Animated.View 
+              key={vehicle.id} 
+              style={[
+                styles.vehicleCard,
+                cardAnimations[index] ? {
+                  opacity: cardAnimations[index],
+                  transform: [{
+                    translateY: cardAnimations[index].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [30, 0],
+                    })
+                  }]
+                } : {}
+              ]}
+            >
               {/* Header principal avec icône et nom */}
               <View style={styles.vehicleHeader}>
-                <View style={styles.vehicleIcon}>
-                  <Ionicons name="car" size={28} color="#374151" />
-                </View>
+                <LinearGradient
+                  colors={['#7C3AED', '#5B21B6']}
+                  style={styles.vehicleIcon}
+                >
+                  <Ionicons name="car-sport" size={28} color="white" />
+                </LinearGradient>
                 <View style={styles.vehicleMainInfo}>
                   <ThemedText style={styles.vehicleName}>{vehicle.name}</ThemedText>
                   <ThemedText style={styles.vehicleSubtitle}>
@@ -424,7 +661,7 @@ export default function VehiclesScreen() {
                   </View>
                 )}
               </View>
-            </View>
+            </Animated.View>
             ))
           )}
       </ScrollView>
@@ -467,37 +704,223 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-  emptyState: {
-    alignItems: 'center',
+  emptyContainer: {
+    flex: 1,
+  },
+  emptyScrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
+  },
+  // Hero Section
+  heroSection: {
+    marginBottom: 32,
+  },
+  heroGradient: {
     padding: 40,
-    marginTop: 40,
+    borderRadius: 24,
+    alignItems: 'center',
+    marginHorizontal: 16,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 12,
   },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    opacity: 0.7,
+  heroIconContainer: {
     marginBottom: 24,
   },
-  emptyButton: {
-    minWidth: 200,
+  heroIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 12,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    lineHeight: 24,
+    fontWeight: '500',
+  },
+  // Features Section
+  featuresSection: {
+    paddingHorizontal: 16,
+    marginBottom: 32,
+  },
+  featuresTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  featuresGrid: {
+    gap: 16,
+  },
+  featureCard: {
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  featureGradient: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  featureIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  featureTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  featureDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  // How it Works Section
+  howItWorksSection: {
+    paddingHorizontal: 16,
+    marginBottom: 32,
+  },
+  howItWorksTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  stepsContainer: {
+    gap: 20,
+  },
+  stepItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 16,
+  },
+  stepNumber: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#7C3AED',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  stepNumberText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'white',
+  },
+  stepContent: {
+    flex: 1,
+    paddingTop: 4,
+  },
+  stepTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  stepDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  // Call to Action Section
+  ctaSection: {
+    paddingHorizontal: 16,
+  },
+  ctaCard: {
+    padding: 32,
+    borderRadius: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  ctaIconContainer: {
+    marginBottom: 20,
+  },
+  ctaIconGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  ctaTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  ctaSubtitle: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  ctaButton: {
+    minWidth: 280,
+    paddingVertical: 16,
   },
   vehicleCard: {
     backgroundColor: 'white',
-    marginBottom: 16,
+    marginBottom: 20,
     marginHorizontal: 4,
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: 20,
+    padding: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -507,13 +930,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   vehicleIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F3F4F6',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 16,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   vehicleMainInfo: {
     flex: 1,
