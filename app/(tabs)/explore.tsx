@@ -1,10 +1,12 @@
 import { ThemedText } from '@/components/ThemedText';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { StatsService, UserStats } from '@/lib/statsService';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef } from 'react';
-import { Alert, Animated, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { router } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, RefreshControl, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
@@ -13,6 +15,11 @@ export default function ProfileScreen() {
   const successColor = useThemeColor({}, 'success');
   const warningColor = useThemeColor({}, 'warning');
   const errorColor = useThemeColor({}, 'error');
+
+  // État pour les statistiques
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -25,7 +32,30 @@ export default function ProfileScreen() {
     new Animated.Value(0),
   ]).current;
 
+  const loadStats = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setLoading(true);
+      const userStats = await StatsService.getUserStats(user.id);
+      setStats(userStats);
+    } catch (error) {
+      console.error('Erreur chargement statistiques:', error);
+      Alert.alert('Erreur', 'Impossible de charger les statistiques');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadStats();
+    setRefreshing(false);
+  };
+
   useEffect(() => {
+    loadStats();
+
     // Animation d'entrée
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -49,7 +79,7 @@ export default function ProfileScreen() {
         useNativeDriver: true,
       }).start();
     });
-  }, []);
+  }, [user?.id]);
 
   const handleLogout = () => {
     Alert.alert(
@@ -67,7 +97,7 @@ export default function ProfileScreen() {
   };
 
   const handleSettings = () => {
-    Alert.alert('Paramètres', 'Fonctionnalité de paramètres à implémenter');
+    router.push('/settings');
   };
 
   const handleHelp = () => {
@@ -124,6 +154,14 @@ export default function ProfileScreen() {
         style={styles.scrollContainer} 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#7C3AED']}
+            tintColor="#7C3AED"
+          />
+        }
       >
         {/* Statistiques personnelles */}
         <Animated.View
@@ -142,46 +180,103 @@ export default function ProfileScreen() {
         >
           <ThemedText style={styles.sectionTitle}>Mes statistiques</ThemedText>
           
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC']}
-                style={styles.statGradient}
-              >
-                <View style={[styles.statIcon, { backgroundColor: '#7C3AED' }]}>
-                  <Ionicons name="car" size={20} color="white" />
-                </View>
-                <ThemedText style={[styles.statNumber, { color: '#7C3AED' }]}>1</ThemedText>
-                <ThemedText style={styles.statLabel}>Véhicule</ThemedText>
-              </LinearGradient>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ThemedText style={styles.loadingText}>Chargement des statistiques...</ThemedText>
             </View>
-            
-            <View style={styles.statCard}>
-              <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC']}
-                style={styles.statGradient}
-              >
-                <View style={[styles.statIcon, { backgroundColor: '#F59E0B' }]}>
-                  <Ionicons name="notifications" size={20} color="white" />
-                </View>
-                <ThemedText style={[styles.statNumber, { color: '#F59E0B' }]}>3</ThemedText>
-                <ThemedText style={styles.statLabel}>Notifications</ThemedText>
-              </LinearGradient>
+          ) : (
+            <View style={styles.statsGrid}>
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={['#FFFFFF', '#F8FAFC']}
+                  style={styles.statGradient}
+                >
+                  <View style={[styles.statIcon, { backgroundColor: '#7C3AED' }]}>
+                    <Ionicons name="car" size={20} color="white" />
+                  </View>
+                  <ThemedText style={[styles.statNumber, { color: '#7C3AED' }]}>
+                    {stats?.totalVehicles || 0}
+                  </ThemedText>
+                  <ThemedText style={styles.statLabel}>Véhicules</ThemedText>
+                </LinearGradient>
+              </View>
+              
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={['#FFFFFF', '#F8FAFC']}
+                  style={styles.statGradient}
+                >
+                  <View style={[styles.statIcon, { backgroundColor: '#F59E0B' }]}>
+                    <Ionicons name="notifications" size={20} color="white" />
+                  </View>
+                  <ThemedText style={[styles.statNumber, { color: '#F59E0B' }]}>
+                    {stats?.totalSignalizations || 0}
+                  </ThemedText>
+                  <ThemedText style={styles.statLabel}>Signalisations</ThemedText>
+                </LinearGradient>
+              </View>
+              
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={['#FFFFFF', '#F8FAFC']}
+                  style={styles.statGradient}
+                >
+                  <View style={[styles.statIcon, { backgroundColor: '#10B981' }]}>
+                    <Ionicons name="chatbubbles" size={20} color="white" />
+                  </View>
+                  <ThemedText style={[styles.statNumber, { color: '#10B981' }]}>
+                    {stats?.totalConversations || 0}
+                  </ThemedText>
+                  <ThemedText style={styles.statLabel}>Conversations</ThemedText>
+                </LinearGradient>
+              </View>
+              
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={['#FFFFFF', '#F8FAFC']}
+                  style={styles.statGradient}
+                >
+                  <View style={[styles.statIcon, { backgroundColor: '#EF4444' }]}>
+                    <Ionicons name="mail" size={20} color="white" />
+                  </View>
+                  <ThemedText style={[styles.statNumber, { color: '#EF4444' }]}>
+                    {stats?.totalReceivedSignalizations || 0}
+                  </ThemedText>
+                  <ThemedText style={styles.statLabel}>Reçues</ThemedText>
+                </LinearGradient>
+              </View>
+              
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={['#FFFFFF', '#F8FAFC']}
+                  style={styles.statGradient}
+                >
+                  <View style={[styles.statIcon, { backgroundColor: '#8B5CF6' }]}>
+                    <Ionicons name="checkmark-circle" size={20} color="white" />
+                  </View>
+                  <ThemedText style={[styles.statNumber, { color: '#8B5CF6' }]}>
+                    {StatsService.calculateResolutionRate(stats?.activeSignalizations || 0, stats?.resolvedSignalizations || 0)}%
+                  </ThemedText>
+                  <ThemedText style={styles.statLabel}>Résolues</ThemedText>
+                </LinearGradient>
+              </View>
+              
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={['#FFFFFF', '#F8FAFC']}
+                  style={styles.statGradient}
+                >
+                  <View style={[styles.statIcon, { backgroundColor: '#06B6D4' }]}>
+                    <Ionicons name="time" size={20} color="white" />
+                  </View>
+                  <ThemedText style={[styles.statNumber, { color: '#06B6D4' }]}>
+                    {stats?.averageResponseTime || 0}h
+                  </ThemedText>
+                  <ThemedText style={styles.statLabel}>Réponse</ThemedText>
+                </LinearGradient>
+              </View>
             </View>
-            
-            <View style={styles.statCard}>
-              <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC']}
-                style={styles.statGradient}
-              >
-                <View style={[styles.statIcon, { backgroundColor: '#10B981' }]}>
-                  <Ionicons name="shield-checkmark" size={20} color="white" />
-                </View>
-                <ThemedText style={[styles.statNumber, { color: '#10B981' }]}>100%</ThemedText>
-                <ThemedText style={styles.statLabel}>Sécurisé</ThemedText>
-              </LinearGradient>
-            </View>
-          </View>
+          )}
         </Animated.View>
 
         {/* Actions rapides */}
@@ -202,7 +297,7 @@ export default function ProfileScreen() {
           <ThemedText style={styles.sectionTitle}>Actions rapides</ThemedText>
           
           <View style={styles.quickActionsGrid}>
-            <TouchableOpacity style={styles.quickActionCard}>
+            <TouchableOpacity style={styles.quickActionCard} onPress={handleSettings}>
               <LinearGradient
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.quickActionGradient}
@@ -402,14 +497,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
   },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
   statCard: {
-    flex: 1,
+    width: '47%',
     borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.1,
     shadowRadius: 16,
     elevation: 8,
+    marginBottom: 16,
   },
   statGradient: {
     padding: 20,

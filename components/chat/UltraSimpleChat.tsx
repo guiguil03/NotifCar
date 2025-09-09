@@ -1,3 +1,5 @@
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     Alert,
@@ -6,6 +8,7 @@ import {
     Keyboard,
     KeyboardAvoidingView,
     Platform,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
@@ -33,10 +36,18 @@ export default function UltraSimpleChat({ conversation, onBack }: UltraSimpleCha
   const slideAnim = useRef(new Animated.Value(50)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const inputFocusAnim = useRef(new Animated.Value(0)).current;
+  
+  // Référence pour le FlatList des messages
+  const messagesListRef = useRef<FlatList>(null);
 
   useEffect(() => {
     loadMessages();
     subscribeToMessages();
+    
+    // Marquer tous les messages comme lus quand on ouvre la conversation
+    if (user?.id) {
+      ChatService.markMessagesAsRead(conversation.id, user.id);
+    }
     
     // Animations d'entrée
     Animated.parallel([
@@ -88,6 +99,13 @@ export default function UltraSimpleChat({ conversation, onBack }: UltraSimpleCha
       setLoading(true);
       const messagesData = await ChatService.getConversationMessages(conversation.id);
       setMessages(messagesData);
+      
+      // Scroller vers le bas après le chargement des messages
+      setTimeout(() => {
+        if (messagesListRef.current && messagesData.length > 0) {
+          messagesListRef.current.scrollToEnd({ animated: true });
+        }
+      }, 100);
     } catch (error) {
       console.error('Erreur chargement messages:', error);
       Alert.alert('Erreur', 'Impossible de charger les messages');
@@ -124,6 +142,13 @@ export default function UltraSimpleChat({ conversation, onBack }: UltraSimpleCha
 
       setMessages(prev => [...prev, message]);
       setNewMessage('');
+      
+      // Scroller vers le bas après l'envoi du message
+      setTimeout(() => {
+        if (messagesListRef.current) {
+          messagesListRef.current.scrollToEnd({ animated: true });
+        }
+      }, 100);
     } catch (error) {
       console.error('Erreur envoi message:', error);
       Alert.alert('Erreur', 'Impossible d\'envoyer le message');
@@ -186,26 +211,67 @@ export default function UltraSimpleChat({ conversation, onBack }: UltraSimpleCha
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Retour</Text>
-        </TouchableOpacity>
-        <View style={styles.headerInfo}>
-          <Text style={styles.title}>
-            {`${conversation.vehicleBrand ? conversation.vehicleBrand : 'Véhicule'} ${conversation.vehicleModel ? conversation.vehicleModel : ''}`.trim()}
-          </Text>
-          <Text style={styles.subtitle}>
-            {conversation.vehicleLicensePlate ? conversation.vehicleLicensePlate : 'Plaque inconnue'}
-          </Text>
-        </View>
-        <TouchableOpacity style={styles.moreButton}>
-          <Text style={styles.moreText}>⋯</Text>
-        </TouchableOpacity>
-      </View>
+      <StatusBar barStyle="light-content" backgroundColor="#1E1B4B" />
+      
+      {/* Header avec gradient violet moderne (même style que l'onglet principal) */}
+      <LinearGradient
+        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
+        style={styles.headerGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Animated.View
+          style={[
+            styles.header,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <LinearGradient
+              colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+              style={styles.backButtonGradient}
+            >
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </LinearGradient>
+          </TouchableOpacity>
+          
+          <View style={styles.headerInfo}>
+            <View style={styles.vehicleInfoContainer}>
+              <Ionicons name="car" size={24} color="rgba(255,255,255,0.9)" style={styles.vehicleIcon} />
+              <Text style={styles.title}>
+                {`${conversation.vehicleBrand ? conversation.vehicleBrand : 'Véhicule'} ${conversation.vehicleModel ? conversation.vehicleModel : ''}`.trim()}
+              </Text>
+            </View>
+            <View style={styles.licenseContainer}>
+              <Ionicons name="card" size={18} color="rgba(255,255,255,0.8)" style={styles.licenseIcon} />
+              <Text style={styles.subtitle}>
+                {conversation.vehicleLicensePlate ? conversation.vehicleLicensePlate : 'Plaque inconnue'}
+              </Text>
+            </View>
+            <View style={styles.participantContainer}>
+              <Ionicons name="person" size={18} color="rgba(255,255,255,0.8)" style={styles.participantIcon} />
+              <Text style={styles.participantText}>
+                Conversation avec {getOtherParticipantName()}
+              </Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity style={styles.moreButton}>
+            <LinearGradient
+              colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+              style={styles.moreButtonGradient}
+            >
+              <Ionicons name="ellipsis-vertical" size={20} color="white" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
+      </LinearGradient>
 
       {/* Messages Area */}
-      <View style={[styles.messagesArea, { marginBottom: isKeyboardVisible ? 10 : 0 }]}>
+      <View style={[styles.messagesArea, { marginBottom: isKeyboardVisible ? 10 : 20 }]}>
         {messages.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>💬</Text>
@@ -214,6 +280,7 @@ export default function UltraSimpleChat({ conversation, onBack }: UltraSimpleCha
           </View>
         ) : (
           <FlatList
+            ref={messagesListRef}
             data={messages}
             keyExtractor={(item) => item.id}
             renderItem={renderMessage}
@@ -222,6 +289,9 @@ export default function UltraSimpleChat({ conversation, onBack }: UltraSimpleCha
             showsVerticalScrollIndicator={false}
             onContentSizeChange={() => {
               // Auto-scroll vers le bas quand de nouveaux messages arrivent
+              if (messagesListRef.current) {
+                messagesListRef.current.scrollToEnd({ animated: true });
+              }
             }}
           />
         )}
@@ -231,7 +301,8 @@ export default function UltraSimpleChat({ conversation, onBack }: UltraSimpleCha
       <View style={[
         styles.inputArea,
         { 
-          paddingBottom: isKeyboardVisible ? 10 : 20,
+          paddingBottom: isKeyboardVisible ? 30 : 60,
+          paddingTop: 25,
           transform: [{ translateY: isKeyboardVisible ? -keyboardHeight * 0.1 : 0 }]
         }
       ]}>
@@ -302,57 +373,102 @@ export default function UltraSimpleChat({ conversation, onBack }: UltraSimpleCha
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#F8FAFC',
+  },
+  headerGradient: {
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 24,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#8B5CF6',
-    paddingTop: 50,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    // Animation handled by Animated.View
   },
   backButton: {
     marginRight: 16,
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
-  backText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+  backButtonGradient: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   headerInfo: {
     flex: 1,
+    alignItems: 'center',
+  },
+  vehicleInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  vehicleIcon: {
+    marginRight: 10,
   },
   title: {
     color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 2,
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  licenseContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  licenseIcon: {
+    marginRight: 8,
   },
   subtitle: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 18,
+    fontWeight: '500',
+  },
+  participantContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
+  participantIcon: {
+    marginRight: 8,
+  },
+  participantText: {
+    color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 14,
+    fontWeight: '500',
   },
   moreButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    marginLeft: 16,
   },
-  moreText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
+  moreButtonGradient: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   messagesArea: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F8FAFC',
+    marginTop: -30,
   },
   emptyContainer: {
     flex: 1,
@@ -377,14 +493,14 @@ const styles = StyleSheet.create({
   },
   inputArea: {
     backgroundColor: 'white',
-    padding: 20,
-    borderTopWidth: 3,
-    borderTopColor: '#8B5CF6',
-    shadowColor: '#000',
+    paddingHorizontal: 20,
+    paddingTop: 25,
+    paddingBottom: 60,
+    shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 12,
   },
   inputLabel: {
     fontSize: 16,
@@ -394,18 +510,18 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    backgroundColor: '#f8f9fa',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
     borderRadius: 25,
-    borderWidth: 3,
-    borderColor: '#8B5CF6',
-    padding: 12,
-    minHeight: 60,
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#7C3AED',
+    padding: 16,
+    minHeight: 70,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
   },
   textInput: {
     flex: 1,
@@ -413,13 +529,13 @@ const styles = StyleSheet.create({
     color: '#333',
     backgroundColor: 'white',
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 18,
     borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#8B5CF6',
-    minHeight: 44,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    minHeight: 50,
     maxHeight: 120,
-    textAlignVertical: 'top',
+    textAlignVertical: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -427,21 +543,23 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sendButton: {
-    backgroundColor: '#8B5CF6',
-    paddingHorizontal: 24,
-    paddingVertical: 15,
+    backgroundColor: '#7C3AED',
+    paddingHorizontal: 20,
+    paddingVertical: 18,
     borderRadius: 20,
     marginLeft: 12,
-    minWidth: 80,
+    minWidth: 70,
+    height: 50,
     alignItems: 'center',
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-    elevation: 4,
+    justifyContent: 'center',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
   },
   sendButtonKeyboard: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#6D28D9',
     transform: [{ scale: 1.05 }],
   },
   sendText: {
@@ -509,19 +627,24 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   ownMessageBubble: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#7C3AED',
     borderBottomRightRadius: 4,
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 6,
   },
   otherMessageBubble: {
     backgroundColor: 'white',
     borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   messageText: {
     fontSize: 16,

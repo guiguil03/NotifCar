@@ -70,9 +70,10 @@ export default function ChatScreen() {
     setSelectedConversation(conversation);
   };
 
-  const closeConversation = () => {
+  const closeConversation = async () => {
     setSelectedConversation(null);
-    loadConversations(); // Recharger les conversations
+    // Recharger les conversations pour mettre à jour le compteur de messages non lus
+    await loadConversations();
   };
 
   const getOtherParticipantName = (conversation: Conversation) => {
