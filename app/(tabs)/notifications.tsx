@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
   },
   headerGradient: {
     paddingTop: 50,
-    paddingBottom: 30,
+    paddingBottom: 40,
     paddingHorizontal: 24,
   },
   header: {
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   logoContainer: {
     marginBottom: 0,
@@ -533,6 +533,8 @@ const styles = StyleSheet.create({
   },
   welcomeSection: {
     alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   greetingText: {
     fontSize: 28,

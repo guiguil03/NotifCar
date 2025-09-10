@@ -16,6 +16,10 @@ export default function VehiclesScreen() {
   const { user } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  
+  const handleBack = () => {
+    setShowQRGenerator(false);
+  };
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showQRGenerator, setShowQRGenerator] = useState(false);
   const [showVehicleForm, setShowVehicleForm] = useState(false);
@@ -238,21 +242,47 @@ export default function VehiclesScreen() {
       <View style={styles.container}>
         <LinearGradient
           colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
-          style={styles.header}
+          style={styles.headerGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
-          <View style={styles.headerContent}>
-            <VioletButton
-              title="Retour"
-              onPress={handleVehicleCancel}
-              variant="outline"
-              size="small"
-              style={styles.backButton}
-            />
-            <ThemedText style={styles.headerTitle}>
-              {editingVehicle ? 'Modifier le véhicule' : 'Ajouter un véhicule'}
-            </ThemedText>
-            <View style={styles.placeholder} />
-          </View>
+          <Animated.View
+            style={[
+              styles.header,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }]
+              }
+            ]}
+          >
+            <View style={styles.vehicleFormHeaderTop}>
+              <TouchableOpacity style={styles.backButton} onPress={handleVehicleCancel}>
+                <View style={styles.backButtonGradient}>
+                  <Ionicons name="arrow-back" size={20} color="white" />
+                </View>
+              </TouchableOpacity>
+              
+              <View style={styles.logoContainer}>
+                <LinearGradient
+                  colors={['#FFFFFF', '#F8FAFC']}
+                  style={styles.logoGradient}
+                >
+                  <Ionicons name="car-sport" size={32} color="#7C3AED" />
+                </LinearGradient>
+              </View>
+              
+              <View style={styles.placeholder} />
+            </View>
+            
+            <View style={styles.welcomeSection}>
+              <ThemedText style={styles.greetingText}>
+                {editingVehicle ? 'Modifier' : 'Nouveau véhicule'}
+              </ThemedText>
+              <ThemedText style={styles.subtitleText}>
+                {editingVehicle ? 'Modifiez les informations' : 'Ajoutez un véhicule à votre flotte'}
+              </ThemedText>
+            </View>
+          </Animated.View>
         </LinearGradient>
 
         <ScrollView style={styles.content}>
@@ -268,7 +298,6 @@ export default function VehiclesScreen() {
               color: editingVehicle.color,
               notes: editingVehicle.notes,
             } : undefined}
-            title={editingVehicle ? 'Modifier le véhicule' : 'Ajouter un véhicule'}
           />
         </ScrollView>
       </View>
@@ -280,21 +309,45 @@ export default function VehiclesScreen() {
       <View style={styles.container}>
         <LinearGradient
           colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
-          style={styles.header}
+          style={styles.headerGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
-          <View style={styles.headerContent}>
-            <VioletButton
-              title="Retour"
-              onPress={closeQRGenerator}
-              variant="outline"
-              size="small"
-              style={styles.backButton}
-            />
-            <ThemedText style={styles.headerTitle}>
-              QR Code - {selectedVehicle.name}
-            </ThemedText>
-            <View style={styles.placeholder} />
-          </View>
+          <Animated.View
+            style={[
+              styles.header,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }]
+              }
+            ]}
+          >
+            <View style={styles.qrHeaderTop}>
+              <TouchableOpacity style={styles.qrBackButton} onPress={handleBack}>
+                <View style={styles.backButtonGradient}>
+                  <Ionicons name="arrow-back" size={20} color="white" />
+                </View>
+              </TouchableOpacity>
+              
+              <View style={styles.logoContainer}>
+                <LinearGradient
+                  colors={['#FFFFFF', '#F8FAFC']}
+                  style={styles.logoGradient}
+                >
+                  <Ionicons name="qr-code" size={32} color="#7C3AED" />
+                </LinearGradient>
+              </View>
+            </View>
+            
+            <View style={styles.welcomeSection}>
+              <ThemedText style={styles.greetingText}>
+                QR Code - {selectedVehicle.name}
+              </ThemedText>
+              <ThemedText style={styles.subtitleText}>
+                Scannez ce code pour signaler un problème
+              </ThemedText>
+            </View>
+          </Animated.View>
         </LinearGradient>
 
         <ScrollView style={styles.content}>
@@ -316,18 +369,37 @@ export default function VehiclesScreen() {
     <View style={styles.container}>
       <LinearGradient
         colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
-        style={styles.header}
+        style={styles.headerGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Animated.View
+          style={[
+            styles.header,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
         >
-          <View style={styles.headerContent}>
-              <ThemedText style={styles.headerTitle}>Mes Véhicules</ThemedText>
-          <VioletButton
-            title="Ajouter"
-            onPress={addVehicle}
-            variant="outline"
-            size="small"
-              style={styles.addButton}
-          />
+          <View style={styles.headerTop}>
+            <View style={styles.logoContainer}>
+              <LinearGradient
+                colors={['#FFFFFF', '#F8FAFC']}
+                style={styles.logoGradient}
+              >
+                <Ionicons name="car-sport" size={32} color="#7C3AED" />
+              </LinearGradient>
+            </View>
           </View>
+          
+          <View style={styles.welcomeSection}>
+            <ThemedText style={styles.greetingText}>Mes Véhicules</ThemedText>
+            <ThemedText style={styles.subtitleText}>
+              Gérez et protégez vos véhicules
+            </ThemedText>
+          </View>
+        </Animated.View>
       </LinearGradient>
 
       <ScrollView 
@@ -336,6 +408,29 @@ export default function VehiclesScreen() {
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
       >
+        {/* Bouton Ajouter */}
+        <View style={styles.addButtonContainer}>
+          <TouchableOpacity
+            style={styles.addButtonMain}
+            onPress={addVehicle}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#7C3AED', '#5B21B6', '#4C1D95']}
+              style={styles.addButtonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.addButtonContent}>
+                <View style={styles.addButtonIcon}>
+                  <Ionicons name="add-circle" size={24} color="white" />
+                </View>
+                <ThemedText style={styles.addButtonText}>Ajouter un véhicule</ThemedText>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+        
           {vehicles.length === 0 ? (
             <Animated.View
               style={[
@@ -674,31 +769,153 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  header: {
+  headerGradient: {
     paddingTop: 50,
-    paddingBottom: 20,
+    paddingBottom: 40,
     paddingHorizontal: 24,
   },
-  headerContent: {
+  header: {
+    // Animation handled by Animated.View
+  },
+  headerTop: {
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 24,
+  },
+  qrHeaderTop: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    position: 'relative',
+  },
+  vehicleFormHeaderTop: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingHorizontal: 8,
+  },
+  logoContainer: {
+    marginBottom: 0,
+  },
+  logoGradient: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  headerInfo: {
+    alignItems: 'center',
+    paddingTop: 4,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '800',
     color: 'white',
-    flex: 1,
+    marginBottom: 8,
     textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    fontWeight: '500',
+    lineHeight: 22,
   },
   addButton: {
-    minWidth: 80,
+    minWidth: 100,
+    marginRight: 8,
+  },
+  addButtonContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  addButtonMain: {
+    width: '100%',
+    maxWidth: 300,
+    borderRadius: 16,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  addButtonGradient: {
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  addButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addButtonIcon: {
+    marginRight: 12,
+  },
+  addButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'white',
+    textAlign: 'center',
+  },
+  welcomeSection: {
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  greetingText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 8,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  subtitleText: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontWeight: '500',
   },
   backButton: {
-    minWidth: 80,
+    padding: 8,
+  },
+  qrBackButton: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    zIndex: 10,
+    padding: 8,
+  },
+  backButtonGradient: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   placeholder: {
     width: 80,
+    height: 40,
   },
   content: {
     flex: 1,

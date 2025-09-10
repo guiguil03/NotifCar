@@ -137,33 +137,6 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
         contentContainerStyle={styles.scrollContent}
       >
         {/* Header avec gradient violet */}
-        <Animated.View
-          style={[
-            styles.header,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-        >
-          <LinearGradient
-            colors={['#7C3AED', '#5B21B6', '#4C1D95']}
-            style={styles.headerGradient}
-          >
-            <View style={styles.headerIconContainer}>
-              <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC']}
-                style={styles.headerIconGradient}
-              >
-                <Ionicons name="car-sport" size={32} color="#7C3AED" />
-              </LinearGradient>
-            </View>
-            <ThemedText style={styles.headerTitle}>{title}</ThemedText>
-            <ThemedText style={styles.headerSubtitle}>
-              Renseignez les informations de votre véhicule
-            </ThemedText>
-          </LinearGradient>
-        </Animated.View>
 
         {/* Formulaire avec cartes animées */}
         <View style={styles.formContainer}>
@@ -575,7 +548,7 @@ const styles = StyleSheet.create({
   formContainer: {
     flex: 1,
     padding: 20,
-    paddingTop: 30,
+    paddingTop: 10,
   },
   formCard: {
     backgroundColor: 'white',

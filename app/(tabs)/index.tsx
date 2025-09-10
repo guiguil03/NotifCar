@@ -166,24 +166,14 @@ export default function HomeScreen() {
                 <Ionicons name="car-sport" size={32} color="#7C3AED" />
               </LinearGradient>
             </View>
-            
-            <TouchableOpacity 
-              style={styles.profileButton}
-              onPress={handleProfile}
-            >
-              <LinearGradient
-                colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
-                style={styles.profileButtonGradient}
-              >
-                <Ionicons name="person" size={20} color="white" />
-              </LinearGradient>
-            </TouchableOpacity>
           </View>
           
-          <View style={styles.headerInfo}>
-            <ThemedText style={styles.appTitle}>Notifcar</ThemedText>
-            <ThemedText style={styles.appSubtitle}>
-              Protection automobile intelligente
+          <View style={styles.welcomeSection}>
+            <ThemedText style={styles.greetingText}>
+              {getGreeting()}{user?.user_metadata?.full_name ? ` ${user.user_metadata.full_name.split(' ')[0]}` : ''} !
+            </ThemedText>
+            <ThemedText style={styles.subtitleText}>
+              Votre sécurité automobile en un clic
             </ThemedText>
           </View>
         </Animated.View>
@@ -194,42 +184,6 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Section de bienvenue */}
-        <Animated.View
-          style={[
-            styles.welcomeCard,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-        >
-          <LinearGradient
-            colors={['#FFFFFF', '#F8FAFC']}
-            style={styles.welcomeCardGradient}
-          >
-            <View style={styles.welcomeHeader}>
-              <View style={styles.welcomeIconContainer}>
-                <LinearGradient
-                  colors={['#7C3AED', '#5B21B6']}
-                  style={styles.welcomeIconGradient}
-                >
-                  <Ionicons name="sunny" size={24} color="white" />
-                </LinearGradient>
-              </View>
-              <View style={styles.welcomeTextContainer}>
-                <ThemedText style={styles.greetingText}>
-                  {getGreeting()}{user?.user_metadata?.full_name ? ` ${user.user_metadata.full_name.split(' ')[0]}` : ''} !
-                </ThemedText>
-                <ThemedText style={styles.timeText}>{getTimeString()}</ThemedText>
-                <ThemedText style={styles.dateText}>{getDateString()}</ThemedText>
-              </View>
-            </View>
-            <ThemedText style={styles.welcomeSubtitle}>
-              Votre véhicule est protégé 24h/24 avec Notifcar
-            </ThemedText>
-          </LinearGradient>
-        </Animated.View>
         {/* Action principale avec animation de pulsation */}
         <Animated.View 
           style={[
@@ -499,7 +453,7 @@ const styles = StyleSheet.create({
   },
   headerGradient: {
     paddingTop: 50,
-    paddingBottom: 30,
+    paddingBottom: 40,
     paddingHorizontal: 24,
   },
   header: {
@@ -509,7 +463,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoContainer: {
-    marginBottom: 20,
+    marginBottom: 0,
   },
   logoGradient: {
     width: 64,
@@ -525,23 +479,18 @@ const styles = StyleSheet.create({
   },
   welcomeSection: {
     alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   greetingText: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 4,
-  },
-  timeText: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#7C3AED',
-    marginBottom: 2,
-  },
-  dateText: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
+    color: 'white',
+    marginBottom: 8,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   subtitleText: {
     fontSize: 16,
@@ -775,8 +724,8 @@ const styles = StyleSheet.create({
   // Nouveaux styles pour les sections modernes
   headerTop: {
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 24,
   },
   profileButton: {
@@ -840,76 +789,5 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 16,
-  },
-  // Nouveaux styles pour la carte de bienvenue
-  welcomeCard: {
-    marginHorizontal: 20,
-    marginTop: -20,
-    marginBottom: 30,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 12,
-  },
-  welcomeCardGradient: {
-    padding: 24,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  welcomeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  welcomeIconContainer: {
-    marginRight: 16,
-  },
-  welcomeIconGradient: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  welcomeTextContainer: {
-    flex: 1,
-  },
-  welcomeSubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 22,
-    fontWeight: '500',
-  },
-  // Styles pour le header simplifié
-  headerInfo: {
-    alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 30,
-  },
-  appTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: 'white',
-    marginBottom: 8,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  appSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
-    textAlign: 'center',
-    fontWeight: '500',
-    lineHeight: 22,
   },
 });

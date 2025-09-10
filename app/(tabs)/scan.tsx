@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, Animated, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
@@ -35,6 +36,10 @@ export default function ScanScreen() {
   const { createConversationFromQR } = useChat();
   
   const primaryColor = useThemeColor({}, 'primary');
+  
+  const handleBack = () => {
+    router.back();
+  };
   // const secondaryColor = useThemeColor({}, 'secondary');
   const gradientStart = useThemeColor({}, 'gradientStart');
   // const gradientEnd = useThemeColor({}, 'gradientEnd');
@@ -416,7 +421,7 @@ export default function ScanScreen() {
                 }
               ]}
             >
-              <TouchableOpacity style={styles.backButton}>
+              <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                 <LinearGradient
                   colors={['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
                   style={styles.backButtonGradient}
