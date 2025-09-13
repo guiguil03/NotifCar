@@ -10,19 +10,41 @@
     "newArchEnabled": true,
     "extra": {
       "eas": {
-        "projectId": "ac950a40-2d18-4756-955f-2b1d308b9d4b"
+        "projectId": "55f6b8d7-59e3-43b2-979c-1145b429c1b1"
       },
       "router": {}
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.glafay.notifcar",
+      "infoPlist": {
+        "NSCameraUsageDescription": "NotifCar needs camera access to scan QR codes.",
+        "NSPhotoLibraryUsageDescription": "NotifCar needs photo access to let you upload or save images.",
+        "NSUserTrackingUsageDescription": "NotifCar uses this permission to provide a better experience with notifications.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.glafay.notifcar",
+      "permissions": [
+        "CAMERA",
+        "INTERNET",
+        "VIBRATE",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "POST_NOTIFICATIONS",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.ACCESS_MEDIA_LOCATION",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -44,16 +66,35 @@
         "expo-notifications",
         {
           "icon": "./assets/images/notification-icon.png",
-          "color": "#8B5CF6",
-          "sounds": [
-            "./assets/sounds/notification.wav"
-          ]
+          "color": "#8B5CF6"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
+          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
+          "isAccessMediaLocationEnabled": true,
+          "granularPermissions": ["photo"]
+        }
+      ],
+      [
+        "expo-dev-client",
+        {
+          "launchMode": "most-recent"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
     },
-    "owner": "glafay996"
+    "owner": "caskodev"
   }
 }
