@@ -1,5 +1,4 @@
 import UltraSimpleChat from '@/components/chat/UltraSimpleChat';
-import { QRDebugger } from '@/components/dev/QRDebugger';
 import { ThemedText } from '@/components/ThemedText';
 import { VioletButton } from '@/components/ui/VioletButton';
 import { useChat } from '@/contexts/ChatContext';
@@ -28,7 +27,6 @@ export default function ScanScreen() {
   const [customReason, setCustomReason] = useState<string>('');
   const [vehicleIssue, setVehicleIssue] = useState<string>('');
   const [urgency, setUrgency] = useState<string>('normal');
-  const [showQRDebugger, setShowQRDebugger] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [showConversations, setShowConversations] = useState(false);
@@ -110,23 +108,12 @@ export default function ScanScreen() {
     
     setScanned(true);
     
-    // Logs de débogage pour voir ce qui est scanné
-    console.log('=== SCAN QR CODE ===');
-    console.log('Type:', type);
-    console.log('Data scannée:', data);
-    console.log('Type de data:', typeof data);
-    console.log('Longueur:', data.length);
-    console.log('Commence par notifcar:', data.startsWith('notifcar:'));
-    console.log('Parties après split:', data.split(':'));
-    console.log('========================');
     
     // Validation du QR code avec le service
     const validation = QRCodeService.validateQRCode(data);
     
-    console.log('Résultat validation:', validation);
     
     if (validation.isValid && validation.vehicleId && validation.ownerId) {
-      console.log('QR code valide, ouverture du modal');
       setScannedVehicleId(data); // Stocker le QR code complet
 
       // Récupérer un nom lisible pour le propriétaire
@@ -153,7 +140,6 @@ export default function ScanScreen() {
 
       setShowMessageModal(true);
     } else {
-      console.log('QR code invalide, affichage de l\'alerte');
       Alert.alert(
         'QR Code invalide',
         `Ce QR code n'est pas un code NotifCar valide.\n\nDonnées scannées: "${data}"\n\nAssurez-vous de scanner un QR code généré par l'application NotifCar.`,
@@ -272,7 +258,6 @@ export default function ScanScreen() {
         throw new Error('Erreur lors de la création de la signalisation ou de la conversation');
       }
     } catch (error) {
-      console.error('Erreur envoi message:', error);
       Alert.alert('Erreur', 'Impossible d\'envoyer le message. Veuillez réessayer.');
     } finally {
       setSendingMessage(false);
@@ -509,66 +494,7 @@ export default function ScanScreen() {
                 }
               ]}
             >
-              <View style={styles.instructionCard}>
-                <LinearGradient
-                  colors={['#FFFFFF', '#F8FAFC']}
-                  style={styles.instructionCardGradient}
-                >
-                  <View style={[styles.instructionIcon, { backgroundColor: primaryColor }]}>
-                    <Ionicons name="information-circle" size={20} color="white" />
-                  </View>
-                  <View style={styles.instructionContent}>
-                    <ThemedText style={styles.instructionTitle}>
-                      Comment scanner ?
-                    </ThemedText>
-                    <ThemedText style={styles.instructionDescription}>
-                      Scannez le QR code Notifcar apposé sur le pare-brise du véhicule
-                    </ThemedText>
-                  </View>
-                </LinearGradient>
-              </View>
-
-              {/* Bouton de débogage QR */}
-              <TouchableOpacity
-                style={styles.debugButtonMain}
-                onPress={() => setShowQRDebugger(true)}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#FF0000', '#FF4500', '#FF6B35']}
-                  style={styles.debugButtonGradient}
-                >
-                  <Ionicons name="bug" size={32} color="white" />
-                  <Text style={styles.debugButtonMainText}>🐛 DÉBOGUER QR CODE</Text>
-                  <Text style={styles.debugButtonSubText}>Corriger les QR codes défectueux</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
-
-            {/* Bouton Conversations */}
-            <Animated.View
-              style={[
-                styles.debugButtonContainer,
-                {
-                  opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }]
-                }
-              ]}
-            >
-              <TouchableOpacity
-                onPress={toggleConversations}
-                style={styles.debugButton}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#8B5CF6', '#A855F7', '#C084FC']}
-                  style={styles.debugButtonGradient}
-                >
-                  <Ionicons name="chatbubbles" size={32} color="white" />
-                  <Text style={styles.debugButtonMainText}>💬 MESSAGES</Text>
-                  <Text style={styles.debugButtonSubText}>Voir les conversations ({conversations.length})</Text>
-                </LinearGradient>
-              </TouchableOpacity>
+              
             </Animated.View>
           </LinearGradient>
         </View>
@@ -601,7 +527,13 @@ export default function ScanScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={styles.modalContent} 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContentContainer}
+            keyboardShouldPersistTaps="handled"
+            bounces={true}
+          >
             <View style={styles.messageInfo}>
               <View style={styles.messageInfoIcon}>
                 <Ionicons name="car" size={24} color="#7C3AED" />
@@ -793,24 +725,6 @@ export default function ScanScreen() {
       </KeyboardAvoidingView>
     </Modal>
 
-    {/* Modal de débogage QR */}
-    <Modal
-      visible={showQRDebugger}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={() => setShowQRDebugger(false)}
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => setShowQRDebugger(false)} style={styles.modalCloseButton}>
-            <Ionicons name="close" size={24} color="#6B7280" />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Débogueur QR Code</Text>
-          <View style={{ width: 24 }} />
-        </View>
-        <QRDebugger />
-      </View>
-    </Modal>
 
     {/* Modal Conversations */}
     <Modal
@@ -886,6 +800,10 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'transparent',
   },
   headerGradient: {
@@ -940,10 +858,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 10,
   },
   scanFrame: {
-    width: 280,
-    height: 280,
+    width: '90%',
+    height: '60%',
+    maxWidth: 350,
+    maxHeight: 350,
     position: 'relative',
   },
   scanFrameGradient: {
@@ -1154,6 +1075,11 @@ const styles = StyleSheet.create({
   modalContent: {
     flex: 1,
     padding: 24,
+    paddingBottom: 100, // Plus d'espace pour les boutons
+  },
+  scrollContentContainer: {
+    flexGrow: 1,
+    paddingBottom: 50, // Espace supplémentaire en bas
   },
   messageInfo: {
     flexDirection: 'row',
@@ -1288,67 +1214,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
-  },
-  debugButtonContainer: {
-    marginHorizontal: 20,
-    marginVertical: 10,
-  },
-  debugButton: {
-    borderWidth: 2,
-    borderColor: '#FF4500',
-    shadowColor: '#FF4500',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  debugButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  debugButtonMain: {
-    width: '100%',
-    marginVertical: 10,
-    borderRadius: 12,
-    borderWidth: 3,
-    borderColor: '#FF0000',
-    shadowColor: '#FF0000',
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 12,
-  },
-  debugButtonGradient: {
-    padding: 20,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  debugButtonMainText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-    marginTop: 8,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-  },
-  debugButtonSubText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
-    textAlign: 'center',
-    marginTop: 4,
-    fontStyle: 'italic',
   },
   // Styles pour les conversations
   conversationsModalContainer: {

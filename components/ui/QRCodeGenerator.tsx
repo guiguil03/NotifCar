@@ -326,67 +326,44 @@ export function QRCodeGenerator({ vehicleData, qrCodeFromDB, onQRGenerated }: QR
         </View>
       </View>
 
-      {/* Actions principales */}
-      <View style={styles.primaryActions}>
+      {/* Actions principales - 3 boutons en ligne */}
+      <View style={styles.mainActionsContainer}>
         <TouchableOpacity
-          style={[styles.actionButton, styles.primaryButton]}
-          onPress={saveToCloud}
-          disabled={isSaving || savedToCloud}
+          style={[styles.mainActionButton, styles.violetButton]}
+          onPress={printQRCode}
+          disabled={isPrinting}
         >
-          <Ionicons 
-            name={savedToCloud ? "checkmark-circle" : "cloud-upload"} 
-            size={18} 
-            color="white" 
-          />
-          <ThemedText style={styles.primaryButtonText}>
-            {savedToCloud ? "✓ Sauvegardé" : "Sauvegarder"}
+          <View style={styles.buttonIconContainer}>
+            <Ionicons name="share" size={20} color="white" />
+          </View>
+          <ThemedText style={styles.mainButtonText}>
+            {isPrinting ? "Génération..." : "Partager"}
           </ThemedText>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.actionButton, styles.secondaryButton]}
-          onPress={downloadQRCode}
-          disabled={isDownloading}
-        >
-          <Ionicons name="download" size={18} color="#7C3AED" />
-          <ThemedText style={styles.secondaryButtonText}>
-            Télécharger
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
-      
-      {/* Actions secondaires */}
-      <View style={styles.secondaryActions}>
-        <TouchableOpacity
-          style={styles.secondaryActionButton}
-          onPress={captureAndShare}
-          disabled={isCapturing}
-        >
-          <Ionicons name="share" size={16} color="#7C3AED" />
-          <ThemedText style={styles.secondaryActionText}>
-            {isCapturing ? "Capture..." : "Partager Image"}
-          </ThemedText>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.secondaryActionButton}
-          onPress={captureAndSave}
-          disabled={isCapturing}
-        >
-          <Ionicons name="save" size={16} color="#7C3AED" />
-          <ThemedText style={styles.secondaryActionText}>
-            {isCapturing ? "Capture..." : "Sauvegarder"}
-          </ThemedText>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.secondaryActionButton}
+          style={[styles.mainActionButton, styles.violetButton]}
           onPress={printQRCode}
           disabled={isPrinting}
         >
-          <Ionicons name="print" size={16} color="#7C3AED" />
-          <ThemedText style={styles.secondaryActionText}>
-            {isPrinting ? "Impression..." : "Imprimer PDF"}
+          <View style={styles.buttonIconContainer}>
+            <Ionicons name="save" size={20} color="white" />
+          </View>
+          <ThemedText style={styles.mainButtonText}>
+            {isPrinting ? "Génération..." : "Sauvegarder"}
+          </ThemedText>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.mainActionButton, styles.violetButton]}
+          onPress={printQRCode}
+          disabled={isPrinting}
+        >
+          <View style={styles.buttonIconContainer}>
+            <Ionicons name="print" size={20} color="white" />
+          </View>
+          <ThemedText style={styles.mainButtonText}>
+            {isPrinting ? "Génération..." : "Imprimer"}
           </ThemedText>
         </TouchableOpacity>
       </View>
@@ -547,62 +524,45 @@ const styles = StyleSheet.create({
     color: '#374151',
     flex: 1,
   },
-  primaryActions: {
+  // Nouveaux styles pour les 3 boutons principaux
+  mainActionsContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 24,
+    paddingHorizontal: 4,
   },
-  actionButton: {
+  mainActionButton: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  primaryButton: {
-    backgroundColor: '#7C3AED',
+  violetButton: {
+    backgroundColor: '#7C3AED', // Violet de l'app pour tous les boutons
   },
-  secondaryButton: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#7C3AED',
+  buttonIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
-  primaryButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+  mainButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
     color: 'white',
-  },
-  secondaryButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#7C3AED',
-  },
-  secondaryActions: {
-    flexDirection: 'row',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
-  secondaryActionButton: {
-    flex: 1,
-    minWidth: '30%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#7C3AED',
-  },
-  secondaryActionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#7C3AED',
     textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });

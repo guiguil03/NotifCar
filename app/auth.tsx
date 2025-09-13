@@ -359,12 +359,14 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   logoSection: {
+    zIndex: -1,
     alignItems: 'center',
     marginBottom: 48,
   },
   logoContainer: {
-    marginBottom: 29,
-    marginTop: 0,
+    zIndex: -1,
+    marginBottom: 20,
+    marginTop: 20,
   },
   logoGradient: {
     width: 80,

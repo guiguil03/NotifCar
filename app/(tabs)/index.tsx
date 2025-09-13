@@ -478,6 +478,8 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   welcomeSection: {
+    zIndex: 1,
+    top: 20,
     alignItems: 'center',
     paddingTop: 8,
     paddingBottom: 8,
@@ -511,6 +513,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   mainActionButton: {
+    top: 30,
     borderRadius: 24,
     shadowColor: '#8B5CF6',
     shadowOffset: { width: 0, height: 12 },

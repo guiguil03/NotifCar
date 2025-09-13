@@ -350,7 +350,13 @@ export default function VehiclesScreen() {
           </Animated.View>
         </LinearGradient>
 
-        <ScrollView style={styles.content}>
+        <ScrollView 
+          style={styles.content}
+          contentContainerStyle={styles.qrScrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={true}
+          keyboardShouldPersistTaps="handled"
+        >
           <QRCodeGenerator
             vehicleData={{
               vehicleName: selectedVehicle.name,
@@ -920,6 +926,10 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+  },
+  qrScrollContent: {
+    flexGrow: 1,
+    paddingBottom: 100, // Plus d'espace pour les boutons
   },
   emptyContainer: {
     flex: 1,
