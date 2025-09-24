@@ -16,7 +16,29 @@ export class QRCodeService {
     const vehicleId = this.generateUniqueVehicleId();
     const qrString = `notifcar:${vehicleId}:${vehicleData.ownerId}`;
     
+    console.log('[QRCodeService] Génération QR code:', {
+      vehicleId,
+      ownerId: vehicleData.ownerId,
+      qrString,
+      vehicleName: vehicleData.vehicleName
+    });
+    
     return { qrString, vehicleId };
+  }
+
+  /**
+   * Génère un QR code pour un véhicule existant (utilise l'ID existant)
+   */
+  static generateQRCodeForExistingVehicle(vehicleId: string, ownerId: string): string {
+    const qrString = `notifcar:${vehicleId}:${ownerId}`;
+    
+    console.log('[QRCodeService] Génération QR code pour véhicule existant:', {
+      vehicleId,
+      ownerId,
+      qrString
+    });
+    
+    return qrString;
   }
 
   /**

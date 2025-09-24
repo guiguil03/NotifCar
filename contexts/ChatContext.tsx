@@ -178,11 +178,22 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     qrCode: string, 
     initialMessage: string
   ): Promise<Conversation | null> => {
-    if (!user?.id) return null;
+    console.log('[ChatContext] Création conversation depuis QR', {
+      qrCode: qrCode?.substring(0, 50) + '...',
+      hasUser: Boolean(user?.id),
+      userId: user?.id,
+      messageLength: initialMessage?.length || 0,
+    });
+
+    if (!user?.id) {
+      console.log('[ChatContext] Abandon: utilisateur non authentifié');
+      return null;
+    }
 
     try {
       setError(null);
       
+      console.log('[ChatContext] Appel ChatService.createConversation...');
       // Créer la conversation en cherchant le véhicule par son QR code
       const conversation = await ChatService.createConversation({
         vehicleId: qrCode, // Le QR code scanné
@@ -191,13 +202,18 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         initialMessage,
       });
 
+      console.log('[ChatContext] Conversation créée avec succès', {
+        conversationId: conversation?.id,
+        vehicleId: conversation?.vehicleId,
+      });
+
       // Ajouter à la liste des conversations
       setConversations(prev => [conversation, ...prev]);
       
       return conversation;
     } catch (err) {
-      console.error('Erreur création conversation QR:', err);
-      setError('Impossible de créer la conversation');
+      console.error('[ChatContext] Erreur création conversation QR:', err);
+      setError(`Impossible de créer la conversation: ${err.message}`);
       return null;
     }
   }, [user?.id]);

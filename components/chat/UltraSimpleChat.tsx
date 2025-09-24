@@ -131,9 +131,23 @@ export default function UltraSimpleChat({ conversation, onBack }: UltraSimpleCha
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !user?.id) return;
+    console.log('[Chat] Préparation envoi message', {
+      conversationId: conversation?.id,
+      hasUser: Boolean(user?.id),
+      contentLength: newMessage.length,
+      contentTrimmedLength: newMessage.trim().length,
+    });
+    if (!newMessage.trim()) {
+      console.log('[Chat] Abandon envoi: message vide après trim');
+      return;
+    }
+    if (!user?.id) {
+      console.log('[Chat] Abandon envoi: utilisateur non authentifié');
+      return;
+    }
 
     try {
+      console.log('[Chat] Envoi en cours via ChatService.sendMessage...');
       const message = await ChatService.sendMessage({
         conversationId: conversation.id,
         content: newMessage.trim(),
@@ -142,6 +156,7 @@ export default function UltraSimpleChat({ conversation, onBack }: UltraSimpleCha
 
       setMessages(prev => [...prev, message]);
       setNewMessage('');
+      console.log('[Chat] Envoi réussi', { messageId: message.id, createdAt: message.createdAt });
       
       // Scroller vers le bas après l'envoi du message
       setTimeout(() => {
@@ -150,7 +165,7 @@ export default function UltraSimpleChat({ conversation, onBack }: UltraSimpleCha
         }
       }, 100);
     } catch (error) {
-      console.error('Erreur envoi message:', error);
+      console.error('[Chat] Erreur envoi message:', error);
       Alert.alert('Erreur', 'Impossible d\'envoyer le message');
     }
   };
@@ -215,7 +230,7 @@ export default function UltraSimpleChat({ conversation, onBack }: UltraSimpleCha
       
       {/* Header avec gradient violet moderne (même style que l'onglet principal) */}
       <LinearGradient
-        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
+        colors={['#2633E1', '#1E9B7E', '#26C29E', '#7DDAC5']}
         style={styles.headerGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -496,7 +511,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 25,
     paddingBottom: 60,
-    shadowColor: '#7C3AED',
+    shadowColor: '#2633E1',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -514,10 +529,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderRadius: 25,
     borderWidth: 1,
-    borderColor: '#7C3AED',
+    borderColor: '#2633E1',
     padding: 16,
     minHeight: 70,
-    shadowColor: '#7C3AED',
+    shadowColor: '#2633E1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -543,7 +558,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sendButton: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#2633E1',
     paddingHorizontal: 20,
     paddingVertical: 18,
     borderRadius: 20,
@@ -552,7 +567,7 @@ const styles = StyleSheet.create({
     height: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#7C3AED',
+    shadowColor: '#2633E1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -627,9 +642,9 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   ownMessageBubble: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#2633E1',
     borderBottomRightRadius: 4,
-    shadowColor: '#7C3AED',
+    shadowColor: '#2633E1',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.4,
     shadowRadius: 6,

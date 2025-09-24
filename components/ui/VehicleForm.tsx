@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   labelFocused: {
-    color: '#7C3AED',
+    color: '#2633E1',
   },
   labelError: {
     color: '#EF4444',
@@ -348,9 +348,9 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   inputContainerFocused: {
-    borderColor: '#7C3AED',
+    borderColor: '#2633E1',
     backgroundColor: 'rgba(255, 255, 255, 1)',
-    shadowColor: '#7C3AED',
+    shadowColor: '#2633E1',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.2,
     shadowRadius: 4,

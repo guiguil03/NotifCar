@@ -162,7 +162,7 @@ export default function SettingsScreen() {
     <View style={styles.settingItem}>
       <View style={styles.settingItemLeft}>
         <View style={styles.settingIcon}>
-          <Ionicons name={icon as any} size={24} color="#7C3AED" />
+          <Ionicons name={icon as any} size={24} color="#2633E1" />
         </View>
         <View style={styles.settingText}>
           <ThemedText style={styles.settingTitle}>{title}</ThemedText>
@@ -174,7 +174,7 @@ export default function SettingsScreen() {
           <Switch
             value={value}
             onValueChange={onValueChange}
-            trackColor={{ false: '#E5E7EB', true: '#7C3AED' }}
+            trackColor={{ false: '#E5E7EB', true: '#2633E1' }}
             thumbColor={value ? '#FFFFFF' : '#FFFFFF'}
             ios_backgroundColor="#E5E7EB"
           />
@@ -193,7 +193,7 @@ export default function SettingsScreen() {
       
       {/* Header avec gradient violet moderne */}
       <LinearGradient
-        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
+        colors={['#2633E1', '#1E9B7E', '#26C29E', '#7DDAC5']}
         style={styles.headerGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

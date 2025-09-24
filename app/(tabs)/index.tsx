@@ -143,10 +143,11 @@ export default function HomeScreen() {
       
       {/* Header avec gradient violet moderne */}
       <LinearGradient
-        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
+        colors={['#2633E1', '#1E9B7E', '#1E9B7E', '#26C29E', '#7DDAC5']}
+        locations={[0, 0.6, 0.7, 0.9, 1]}
         style={styles.headerGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        start={{ x: 0, y: 1 }}
+        end={{ x: 1, y: 0 }}
       >
         <Animated.View
           style={[
@@ -163,7 +164,7 @@ export default function HomeScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.logoGradient}
               >
-                <Ionicons name="car-sport" size={32} color="#7C3AED" />
+                <Ionicons name="car-sport" size={32} color="#2633E1" />
               </LinearGradient>
             </View>
           </View>
@@ -203,7 +204,7 @@ export default function HomeScreen() {
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={['#7C3AED', '#5B21B6', '#4C1D95']}
+              colors={['#2633E1', '#2633E1']}
               style={styles.mainActionGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -255,7 +256,7 @@ export default function HomeScreen() {
                   style={styles.quickActionGradient}
                 >
                   <View style={styles.quickActionHeader}>
-                    <View style={[styles.quickActionIcon, { backgroundColor: '#7C3AED' }]}>
+                    <View style={[styles.quickActionIcon, { backgroundColor: '#2633E1' }]}>
                       <Ionicons name="car" size={24} color="white" />
                     </View>
                     <View style={styles.quickActionArrow}>
@@ -333,10 +334,10 @@ export default function HomeScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.statGradient}
               >
-                <View style={[styles.statIcon, { backgroundColor: '#7C3AED' }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#2633E1' }]}>
                   <Ionicons name="car" size={20} color="white" />
                 </View>
-                <ThemedText style={[styles.statNumber, { color: '#7C3AED' }]}>1</ThemedText>
+                <ThemedText style={[styles.statNumber, { color: '#2633E1' }]}>1</ThemedText>
                 <ThemedText style={styles.statLabel}>Véhicule</ThemedText>
               </LinearGradient>
             </View>
@@ -392,7 +393,7 @@ export default function HomeScreen() {
                 colors={['#E9D5FF', '#DDD6FE']}
                 style={styles.featureGradient}
               >
-                <Ionicons name="qr-code-outline" size={32} color="#7C3AED" />
+                <Ionicons name="qr-code-outline" size={32} color="#2633E1" />
                 <ThemedText style={styles.featureTitle}>Scan QR</ThemedText>
                 <ThemedText style={styles.featureDescription}>
                   Scanner et notifier instantanément
@@ -479,27 +480,27 @@ const styles = StyleSheet.create({
   },
   welcomeSection: {
     zIndex: 1,
-    top: 20,
+    top: 16,
     alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 12,
   },
   greetingText: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 30,
+    fontWeight: '800',
     color: 'white',
-    marginBottom: 8,
+    marginBottom: 10,
     textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
   subtitleText: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
+    fontSize: 17,
+    color: 'rgba(255,255,255,0.95)',
     textAlign: 'center',
     lineHeight: 22,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   scrollContainer: {
     flex: 1,

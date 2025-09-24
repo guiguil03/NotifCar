@@ -114,10 +114,11 @@ export default function ProfileScreen() {
       
       {/* Header avec gradient violet moderne */}
       <LinearGradient
-        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
+        colors={['#2633E1', '#1E9B7E', '#1E9B7E', '#26C29E', '#7DDAC5']}
+        locations={[0, 0.6, 0.7, 0.9, 1]}
         style={styles.headerGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        start={{ x: 0, y: 1 }}
+        end={{ x: 1, y: 0 }}
       >
         <Animated.View
           style={[
@@ -134,7 +135,7 @@ export default function ProfileScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.avatarGradient}
               >
-                <Ionicons name="person" size={40} color="#7C3AED" />
+                <Ionicons name="person" size={40} color="#2633E1" />
               </LinearGradient>
             </View>
             
@@ -158,8 +159,8 @@ export default function ProfileScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#7C3AED']}
-            tintColor="#7C3AED"
+            colors={['#2633E1']}
+            tintColor="#2633E1"
           />
         }
       >
@@ -191,10 +192,10 @@ export default function ProfileScreen() {
                   colors={['#FFFFFF', '#F8FAFC']}
                   style={styles.statGradient}
                 >
-                  <View style={[styles.statIcon, { backgroundColor: '#7C3AED' }]}>
+                  <View style={[styles.statIcon, { backgroundColor: '#2633E1' }]}> 
                     <Ionicons name="car" size={20} color="white" />
                   </View>
-                  <ThemedText style={[styles.statNumber, { color: '#7C3AED' }]}>
+                  <ThemedText style={[styles.statNumber, { color: '#2633E1' }]}> 
                     {stats?.totalVehicles || 0}
                   </ThemedText>
                   <ThemedText style={styles.statLabel}>Véhicules</ThemedText>
@@ -302,7 +303,7 @@ export default function ProfileScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.quickActionGradient}
               >
-                <View style={[styles.quickActionIcon, { backgroundColor: '#7C3AED' }]}>
+                <View style={[styles.quickActionIcon, { backgroundColor: '#2633E1' }]}> 
                   <Ionicons name="settings" size={24} color="white" />
                 </View>
                 <ThemedText style={styles.quickActionTitle}>Paramètres</ThemedText>
@@ -349,7 +350,7 @@ export default function ProfileScreen() {
             >
               <TouchableOpacity style={styles.legalItem}>
                 <View style={styles.legalItemContent}>
-                  <Ionicons name="document-text" size={20} color="#7C3AED" />
+                  <Ionicons name="document-text" size={20} color="#2633E1" />
                   <ThemedText style={styles.legalItemText}>Conditions d&apos;utilisation</ThemedText>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
@@ -359,7 +360,7 @@ export default function ProfileScreen() {
               
               <TouchableOpacity style={styles.legalItem}>
                 <View style={styles.legalItemContent}>
-                  <Ionicons name="shield" size={20} color="#7C3AED" />
+                  <Ionicons name="shield" size={20} color="#2633E1" />
                   <ThemedText style={styles.legalItemText}>Politique de confidentialité</ThemedText>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
@@ -369,7 +370,7 @@ export default function ProfileScreen() {
               
               <TouchableOpacity style={styles.legalItem} onPress={handleAbout}>
                 <View style={styles.legalItemContent}>
-                  <Ionicons name="information-circle" size={20} color="#7C3AED" />
+                  <Ionicons name="information-circle" size={20} color="#2633E1" />
                   <ThemedText style={styles.legalItemText}>À propos</ThemedText>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />

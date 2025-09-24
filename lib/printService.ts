@@ -22,7 +22,7 @@ export class PrintService {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background: linear-gradient(135deg, #7C3AED, #8B5CF6);
+            background: linear-gradient(135deg, #2633E1, #1E9B7E);
             color: white;
             min-height: 100vh;
             display: flex;
@@ -45,7 +45,7 @@ export class PrintService {
           .logo {
             font-size: 32px;
             font-weight: bold;
-            color: #7C3AED;
+            color: #2633E1;
             margin-bottom: 10px;
           }
           .vehicle-name {
@@ -116,7 +116,7 @@ export class PrintService {
           .instruction-icon {
             width: 20px;
             height: 20px;
-            background: #7C3AED;
+            background: #2633E1;
             border-radius: 50%;
             margin-right: 10px;
             display: flex;

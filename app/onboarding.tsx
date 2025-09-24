@@ -143,7 +143,7 @@ export default function OnboardingScreen() {
     >
       <View style={styles.stepHeader}>
         <LinearGradient
-          colors={['#7C3AED', '#5B21B6']}
+          colors={['#2633E1', '#2633E1']}
           style={styles.stepIconGradient}
         >
           <Ionicons name="car-sport" size={32} color="white" />
@@ -160,7 +160,7 @@ export default function OnboardingScreen() {
           style={styles.formGradient}
         >
           <View style={styles.formHeader}>
-            <Ionicons name="information-circle" size={24} color="#7C3AED" />
+            <Ionicons name="information-circle" size={24} color="#2633E1" />
             <ThemedText style={styles.formTitle}>Informations du véhicule</ThemedText>
             <ThemedText style={styles.formSubtitle}>
               Ces informations permettront d'identifier votre véhicule
@@ -172,7 +172,7 @@ export default function OnboardingScreen() {
               <ThemedText style={styles.inputLabel}>Marque du véhicule</ThemedText>
               <View style={styles.inputWrapper}>
                 <View style={styles.inputIcon}>
-                  <Ionicons name="car-sport" size={20} color="#7C3AED" />
+                  <Ionicons name="car-sport" size={20} color="#2633E1" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -189,7 +189,7 @@ export default function OnboardingScreen() {
               <ThemedText style={styles.inputLabel}>Modèle du véhicule</ThemedText>
               <View style={styles.inputWrapper}>
                 <View style={styles.inputIcon}>
-                  <Ionicons name="car" size={20} color="#7C3AED" />
+                  <Ionicons name="car" size={20} color="#2633E1" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -206,7 +206,7 @@ export default function OnboardingScreen() {
               <ThemedText style={styles.inputLabel}>Plaque d'immatriculation</ThemedText>
               <View style={styles.inputWrapper}>
                 <View style={styles.inputIcon}>
-                  <Ionicons name="card" size={20} color="#7C3AED" />
+                  <Ionicons name="card" size={20} color="#2633E1" />
                 </View>
                 <TextInput
                   style={styles.input}
@@ -326,7 +326,8 @@ export default function OnboardingScreen() {
       
       {/* Background avec gradient violet */}
       <LinearGradient
-        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
+        colors={['#2633E1', '#1E9B7E', '#1E9B7E', '#26C29E', '#7DDAC5']}
+        locations={[0, 0.6, 0.7, 0.9, 1]}
         style={styles.backgroundGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -491,7 +492,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
-    shadowColor: '#7C3AED',
+    shadowColor: '#2633E1',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
@@ -707,3 +708,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+

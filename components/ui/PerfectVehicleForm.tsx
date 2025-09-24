@@ -161,7 +161,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
             >
               <View style={styles.inputHeader}>
                 <View style={styles.inputIconContainer}>
-                  <Ionicons name="car-outline" size={20} color="#7C3AED" />
+                  <Ionicons name="car-outline" size={20} color="#2633E1" />
                 </View>
                 <ThemedText style={styles.inputLabel}>Nom du véhicule (optionnel)</ThemedText>
               </View>
@@ -200,7 +200,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
               >
                 <View style={styles.inputHeader}>
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="business" size={20} color="#7C3AED" />
+                    <Ionicons name="business" size={20} color="#2633E1" />
                   </View>
                   <ThemedText style={styles.inputLabel}>
                     Marque <ThemedText style={styles.required}>*</ThemedText>
@@ -245,7 +245,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
               >
                 <View style={styles.inputHeader}>
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="car-sport" size={20} color="#7C3AED" />
+                    <Ionicons name="car-sport" size={20} color="#2633E1" />
                   </View>
                   <ThemedText style={styles.inputLabel}>
                     Modèle <ThemedText style={styles.required}>*</ThemedText>
@@ -293,7 +293,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
               >
                 <View style={styles.inputHeader}>
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="calendar" size={20} color="#7C3AED" />
+                    <Ionicons name="calendar" size={20} color="#2633E1" />
                   </View>
                   <ThemedText style={styles.inputLabel}>
                     Année <ThemedText style={styles.required}>*</ThemedText>
@@ -341,7 +341,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
               >
                 <View style={styles.inputHeader}>
                   <View style={styles.inputIconContainer}>
-                    <Ionicons name="card" size={20} color="#7C3AED" />
+                    <Ionicons name="card" size={20} color="#2633E1" />
                   </View>
                   <ThemedText style={styles.inputLabel}>
                     Plaque <ThemedText style={styles.required}>*</ThemedText>
@@ -388,7 +388,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
             >
               <View style={styles.inputHeader}>
                 <View style={styles.inputIconContainer}>
-                  <Ionicons name="color-palette" size={20} color="#7C3AED" />
+                  <Ionicons name="color-palette" size={20} color="#2633E1" />
                 </View>
                 <ThemedText style={styles.inputLabel}>Couleur</ThemedText>
               </View>
@@ -426,7 +426,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
             >
               <View style={styles.inputHeader}>
                 <View style={styles.inputIconContainer}>
-                  <Ionicons name="document-text" size={20} color="#7C3AED" />
+                  <Ionicons name="document-text" size={20} color="#2633E1" />
                 </View>
                 <ThemedText style={styles.inputLabel}>Notes</ThemedText>
               </View>
@@ -480,7 +480,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
               disabled={isSubmitting}
             >
               <LinearGradient
-                colors={isSubmitting ? ['#9CA3AF', '#6B7280'] : ['#7C3AED', '#5B21B6']}
+                colors={isSubmitting ? ['#9CA3AF', '#6B7280'] : ['#2633E1', '#2633E1']}
                 style={styles.submitButtonGradient}
               >
                 {isSubmitting ? (
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
   headerGradient: {
     padding: 32,
     alignItems: 'center',
-    shadowColor: '#7C3AED',
+    shadowColor: '#2633E1',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,

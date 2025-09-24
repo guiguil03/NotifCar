@@ -119,7 +119,7 @@ export function WorkingVehicleForm({ onSubmit, onCancel, initialData, title = "A
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="car-outline" size={18} color="#7C3AED" />
+                  <Ionicons name="car-outline" size={18} color="#2633E1" />
                 </View>
                 <ThemedText style={styles.label}>Nom du véhicule (optionnel)</ThemedText>
               </View>
@@ -139,7 +139,7 @@ export function WorkingVehicleForm({ onSubmit, onCancel, initialData, title = "A
               <View style={styles.halfWidth}>
                 <View style={styles.labelContainer}>
                   <View style={styles.iconContainer}>
-                    <Ionicons name="business" size={18} color="#7C3AED" />
+                    <Ionicons name="business" size={18} color="#2633E1" />
                   </View>
                   <ThemedText style={styles.label}>
                     Marque <ThemedText style={styles.required}>*</ThemedText>
@@ -165,7 +165,7 @@ export function WorkingVehicleForm({ onSubmit, onCancel, initialData, title = "A
               <View style={styles.halfWidth}>
                 <View style={styles.labelContainer}>
                   <View style={styles.iconContainer}>
-                    <Ionicons name="car-sport" size={18} color="#7C3AED" />
+                    <Ionicons name="car-sport" size={18} color="#2633E1" />
                   </View>
                   <ThemedText style={styles.label}>
                     Modèle <ThemedText style={styles.required}>*</ThemedText>
@@ -195,7 +195,7 @@ export function WorkingVehicleForm({ onSubmit, onCancel, initialData, title = "A
               <View style={styles.halfWidth}>
                 <View style={styles.labelContainer}>
                   <View style={styles.iconContainer}>
-                    <Ionicons name="calendar" size={18} color="#7C3AED" />
+                    <Ionicons name="calendar" size={18} color="#2633E1" />
                   </View>
                   <ThemedText style={styles.label}>
                     Année <ThemedText style={styles.required}>*</ThemedText>
@@ -224,7 +224,7 @@ export function WorkingVehicleForm({ onSubmit, onCancel, initialData, title = "A
               <View style={styles.halfWidth}>
                 <View style={styles.labelContainer}>
                   <View style={styles.iconContainer}>
-                    <Ionicons name="card" size={18} color="#7C3AED" />
+                    <Ionicons name="card" size={18} color="#2633E1" />
                   </View>
                   <ThemedText style={styles.label}>
                     Plaque <ThemedText style={styles.required}>*</ThemedText>
@@ -253,7 +253,7 @@ export function WorkingVehicleForm({ onSubmit, onCancel, initialData, title = "A
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="color-palette" size={18} color="#7C3AED" />
+                  <Ionicons name="color-palette" size={18} color="#2633E1" />
                 </View>
                 <ThemedText style={styles.label}>Couleur</ThemedText>
               </View>
@@ -272,7 +272,7 @@ export function WorkingVehicleForm({ onSubmit, onCancel, initialData, title = "A
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="document-text" size={18} color="#7C3AED" />
+                  <Ionicons name="document-text" size={18} color="#2633E1" />
                 </View>
                 <ThemedText style={styles.label}>Notes</ThemedText>
               </View>
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     borderRadius: 20,
     padding: 24,
-    shadowColor: '#7C3AED',
+    shadowColor: '#2633E1',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 20,

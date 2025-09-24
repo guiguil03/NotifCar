@@ -67,7 +67,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({ onSelectConv
       <View style={styles.conversationHeader}>
         <View style={styles.vehicleInfo}>
           <View style={styles.vehicleIcon}>
-            <Ionicons name="car" size={20} color="#7C3AED" />
+            <Ionicons name="car" size={20} color="#2633E1" />
           </View>
           <View style={styles.vehicleDetails}>
             <Text style={styles.vehicleName}>
@@ -135,8 +135,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({ onSelectConv
           <RefreshControl
             refreshing={loading}
             onRefresh={loadConversations}
-            colors={['#7C3AED']}
-            tintColor="#7C3AED"
+            colors={['#2633E1']}
+            tintColor="#2633E1"
           />
         }
         ListEmptyComponent={renderEmptyState}
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   unreadBadge: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#2633E1',
     borderRadius: 10,
     minWidth: 20,
     height: 20,

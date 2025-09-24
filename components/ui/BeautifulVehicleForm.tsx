@@ -144,7 +144,7 @@ export function BeautifulVehicleForm({ onSubmit, onCancel, initialData, title = 
               <Ionicons 
                 name={icon as any} 
                 size={18} 
-                color={isFocused ? '#FFFFFF' : hasError ? '#EF4444' : '#7C3AED'} 
+                color={isFocused ? '#FFFFFF' : hasError ? '#EF4444' : '#2633E1'} 
               />
             </View>
           )}
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     borderRadius: 20,
     padding: 24,
-    shadowColor: '#7C3AED',
+    shadowColor: '#2633E1',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   iconContainerFocused: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#2633E1',
   },
   iconContainerError: {
     backgroundColor: '#FEE2E2',
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   labelFocused: {
-    color: '#7C3AED',
+    color: '#2633E1',
   },
   labelError: {
     color: '#EF4444',
@@ -435,9 +435,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   inputContainerFocused: {
-    borderColor: '#7C3AED',
+    borderColor: '#2633E1',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#7C3AED',
+    shadowColor: '#2633E1',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.2,
     shadowRadius: 8,

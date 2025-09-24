@@ -38,14 +38,24 @@ export function QRCodeGenerator({ vehicleData, qrCodeFromDB, onQRGenerated }: QR
     
     setIsGenerating(true);
     try {
-      // Utiliser le QR code de la base de données s'il est fourni
-      if (qrCodeFromDB) {
+      // PRIORITÉ 1: Utiliser le QR code de la base de données s'il est fourni et valide
+      if (qrCodeFromDB && qrCodeFromDB.startsWith('notifcar:')) {
+        console.log('[QRCodeGenerator] Utilisation QR code de la base:', qrCodeFromDB);
         setQrString(qrCodeFromDB);
         // Extraire l'ID du véhicule du QR code
         const parts = qrCodeFromDB.split(':');
         setVehicleId(parts[1] || 'unknown');
-      } else {
-        // Sinon, générer un nouveau QR code
+      } 
+      // PRIORITÉ 2: Utiliser l'ID du véhicule existant pour générer le bon QR code
+      else if (vehicleData && vehicleData.vehicleId) {
+        console.log('[QRCodeGenerator] Génération avec ID existant:', vehicleData.vehicleId);
+        const correctQRString = `notifcar:${vehicleData.vehicleId}:${vehicleData.ownerId}`;
+        setQrString(correctQRString);
+        setVehicleId(vehicleData.vehicleId);
+      } 
+      // PRIORITÉ 3: Générer un nouveau QR code (seulement pour nouveaux véhicules)
+      else if (vehicleData) {
+        console.log('[QRCodeGenerator] Génération nouveau QR code');
         const result = QRCodeService.generateVehicleQRCode(vehicleData);
         setQrString(result.qrString);
         setVehicleId(result.vehicleId);
@@ -234,7 +244,7 @@ export function QRCodeGenerator({ vehicleData, qrCodeFromDB, onQRGenerated }: QR
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
           <View style={styles.loadingIcon}>
-            <Ionicons name="qr-code" size={32} color="#7C3AED" />
+            <Ionicons name="qr-code" size={32} color="#2633E1" />
           </View>
           <ThemedText style={styles.loadingText}>
             Génération du QR code...
@@ -256,7 +266,7 @@ export function QRCodeGenerator({ vehicleData, qrCodeFromDB, onQRGenerated }: QR
             style={styles.retryButton}
             onPress={generateQRCode}
           >
-            <Ionicons name="refresh" size={16} color="#7C3AED" />
+            <Ionicons name="refresh" size={16} color="#2633E1" />
             <ThemedText style={styles.retryText}>Réessayer</ThemedText>
           </TouchableOpacity>
         </View>
@@ -269,7 +279,7 @@ export function QRCodeGenerator({ vehicleData, qrCodeFromDB, onQRGenerated }: QR
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerIcon}>
-          <Ionicons name="qr-code" size={24} color="#7C3AED" />
+          <Ionicons name="qr-code" size={24} color="#2633E1" />
         </View>
         <View style={styles.headerText}>
           <ThemedText style={styles.title}>
@@ -428,7 +438,7 @@ const styles = StyleSheet.create({
   retryText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#7C3AED',
+    color: '#2633E1',
   },
   header: {
     flexDirection: 'row',
@@ -545,7 +555,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   violetButton: {
-    backgroundColor: '#7C3AED', // Violet de l'app pour tous les boutons
+    backgroundColor: '#2633E1', // Couleur primaire du nouveau DA
   },
   buttonIconContainer: {
     width: 40,

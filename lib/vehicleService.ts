@@ -28,11 +28,16 @@ export class VehicleService {
       // Générer un nom à partir de brand + model si pas fourni
       const vehicleName = vehicleData.name || `${vehicleData.brand} ${vehicleData.model}`;
       
-      // Générer le QR code avec QRCodeService
-      const { qrString, vehicleId } = QRCodeService.generateVehicleQRCode({
-        vehicleName: vehicleData.name || `${vehicleData.brand} ${vehicleData.model}`,
-        ownerId: vehicleData.ownerId,
-        type: 'notifcar'
+      // Générer un ID unique pour le véhicule
+      const vehicleId = QRCodeService.generateUniqueVehicleId();
+      
+      // Générer le QR code avec l'ID du véhicule
+      const qrString = QRCodeService.generateQRCodeForExistingVehicle(vehicleId, vehicleData.ownerId);
+      
+      console.log('[VehicleService] Création véhicule avec QR code:', {
+        vehicleId,
+        qrString,
+        ownerId: vehicleData.ownerId
       });
       
       const { data, error } = await supabase
@@ -46,7 +51,7 @@ export class VehicleService {
           license_plate: vehicleData.licensePlate,
           color: vehicleData.color || null,
           notes: vehicleData.notes || null,
-          qr_code: qrString, // Utiliser le QR code généré par QRCodeService
+          qr_code: qrString, // Utiliser le QR code généré avec le bon ID
           is_active: vehicleData.isActive ?? true,
         })
         .select()
@@ -212,6 +217,152 @@ export class VehicleService {
     } catch (error) {
       console.error('Erreur VehicleService linkQRCodeToVehicle:', error);
       throw new Error('Impossible de lier le QR code au véhicule');
+    }
+  }
+
+  /**
+   * Régénère le QR code d'un véhicule existant
+   */
+  static async regenerateQRCode(vehicleId: string): Promise<string> {
+    try {
+      // Récupérer les infos du véhicule
+      const { data: vehicle, error: fetchError } = await supabase
+        .from('vehicles')
+        .select('id, owner_id')
+        .eq('id', vehicleId)
+        .single();
+
+      if (fetchError || !vehicle) {
+        throw new Error('Véhicule non trouvé');
+      }
+
+      // Générer le nouveau QR code avec le bon ID
+      const qrString = QRCodeService.generateQRCodeForExistingVehicle(vehicleId, vehicle.owner_id);
+
+      // Mettre à jour le véhicule avec le nouveau QR code
+      const { error: updateError } = await supabase
+        .from('vehicles')
+        .update({ 
+          qr_code: qrString,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', vehicleId);
+
+      if (updateError) {
+        throw new Error('Impossible de mettre à jour le QR code');
+      }
+
+      console.log('[VehicleService] QR code régénéré:', {
+        vehicleId,
+        qrString
+      });
+
+      return qrString;
+    } catch (error) {
+      console.error('Erreur VehicleService regenerateQRCode:', error);
+      throw new Error('Impossible de régénérer le QR code');
+    }
+  }
+
+  /**
+   * Recherche un véhicule par son QR code
+   */
+  static async getVehicleByQRCode(qrCode: string): Promise<Vehicle | null> {
+    try {
+      console.log('[VehicleService] Recherche véhicule par QR code:', qrCode);
+      
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select('*')
+        .eq('qr_code', qrCode)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erreur recherche véhicule par QR code:', error);
+        throw new Error(`Impossible de rechercher le véhicule: ${error.message}`);
+      }
+
+      if (!data) {
+        console.log('Aucun véhicule trouvé avec ce QR code');
+        return null;
+      }
+
+      console.log('Véhicule trouvé par QR code:', {
+        id: data.id,
+        brand: data.brand,
+        model: data.model,
+        qr_code: data.qr_code
+      });
+
+      return {
+        id: data.id,
+        name: `${data.brand} ${data.model}`,
+        brand: data.brand,
+        model: data.model,
+        year: data.year,
+        licensePlate: data.license_plate,
+        color: data.color,
+        notes: data.notes,
+        ownerId: data.owner_id,
+        qrCodeId: data.qr_code,
+        isActive: data.is_active,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+    } catch (error) {
+      console.error('Erreur VehicleService getVehicleByQRCode:', error);
+      throw new Error(`Impossible de rechercher le véhicule: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    }
+  }
+
+  /**
+   * Recherche un véhicule par son ID
+   */
+  static async getVehicleById(vehicleId: string): Promise<Vehicle | null> {
+    try {
+      console.log('[VehicleService] Recherche véhicule par ID:', vehicleId);
+      
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select('*')
+        .eq('id', vehicleId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erreur recherche véhicule par ID:', error);
+        throw new Error(`Impossible de rechercher le véhicule: ${error.message}`);
+      }
+
+      if (!data) {
+        console.log('Aucun véhicule trouvé avec cet ID');
+        return null;
+      }
+
+      console.log('Véhicule trouvé par ID:', {
+        id: data.id,
+        brand: data.brand,
+        model: data.model,
+        qr_code: data.qr_code
+      });
+
+      return {
+        id: data.id,
+        name: `${data.brand} ${data.model}`,
+        brand: data.brand,
+        model: data.model,
+        year: data.year,
+        licensePlate: data.license_plate,
+        color: data.color,
+        notes: data.notes,
+        ownerId: data.owner_id,
+        qrCodeId: data.qr_code,
+        isActive: data.is_active,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+    } catch (error) {
+      console.error('Erreur VehicleService getVehicleById:', error);
+      throw new Error(`Impossible de rechercher le véhicule: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
   }
 

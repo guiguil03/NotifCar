@@ -113,44 +113,70 @@ export class ChatService {
         throw new Error('Erreur de sécurité : le propriétaire du QR code ne correspond pas au véhicule.');
       }
 
-      // Créer la conversation + participants via RPC (bypass RLS correctement)
-      const { data: conversation, error } = await supabase
-        .rpc('get_or_create_conversation_with_participants_v5', {
-          p_vehicle_id: vehicle.id,
-          p_owner_id: qrValidation.ownerId,
-          p_reporter_id: reporterId,
-          p_subject: data.subject || 'Problème signalé via QR Code',
-        })
+      // Vérifier si une conversation existe déjà
+      const { data: existingConversation } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('vehicle_id', vehicle.id)
+        .eq('reporter_id', reporterId)
+        .eq('status', 'active')
         .single();
 
-      if (error) throw error;
-
-      // Ajouter le message initial si fourni (via RPC pour bypass RLS)
-      if (data.initialMessage) {
-        const { error: sendErr } = await supabase
-          .rpc('send_message_if_participant', {
-            p_conversation_id: (conversation as any).conv_id ?? (conversation as any).id,
-            p_sender_id: reporterId,
-            p_content: data.initialMessage,
-            p_message_type: 'text'
+      let conversation;
+      if (existingConversation) {
+        conversation = existingConversation;
+      } else {
+        // Créer une nouvelle conversation
+        const { data: newConversation, error: convError } = await supabase
+          .from('conversations')
+          .insert({
+            vehicle_id: vehicle.id,
+            owner_id: qrValidation.ownerId,
+            reporter_id: reporterId,
+            status: 'active',
+            subject: data.subject || 'Problème signalé via QR Code',
           })
+          .select()
           .single();
-        if (sendErr) throw sendErr;
+
+        if (convError) throw convError;
+        conversation = newConversation;
+
+        // Ajouter les participants
+        const participants = [
+          { conversation_id: conversation.id, user_id: qrValidation.ownerId },
+          { conversation_id: conversation.id, user_id: reporterId }
+        ];
+
+        const { error: participantsError } = await supabase
+          .from('conversation_participants')
+          .insert(participants);
+
+        if (participantsError) {
+          console.error('Erreur ajout participants:', participantsError);
+          // Ne pas faire échouer la création de conversation
+        }
       }
 
-      // Mapper retour v3 -> shape standard conversations
-      // Map retour v5 -> standard conversation
-      const conv = {
-        id: (conversation as any).conv_id,
-        vehicle_id: (conversation as any).conv_vehicle_id,
-        owner_id: (conversation as any).conv_owner_id,
-        reporter_id: (conversation as any).conv_reporter_id,
-        status: (conversation as any).conv_status,
-        subject: (conversation as any).conv_subject,
-        created_at: (conversation as any).conv_created_at,
-        updated_at: (conversation as any).conv_updated_at,
-      } as any;
-      return this.mapConversationFromDB(conv);
+      // Ajouter le message initial si fourni
+      if (data.initialMessage) {
+        const { error: sendErr } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversation.id,
+            sender_id: reporterId,
+            content: data.initialMessage,
+            message_type: 'text',
+            is_read: false
+          });
+
+        if (sendErr) {
+          console.error('Erreur envoi message initial:', sendErr);
+          // Ne pas faire échouer la création de conversation
+        }
+      }
+
+      return this.mapConversationFromDB(conversation);
     } catch (error) {
       console.error('Erreur création conversation:', error);
       throw new Error('Impossible de créer la conversation');
@@ -165,36 +191,62 @@ export class ChatService {
   // Obtenir les conversations d'un utilisateur
   static async getUserConversations(userId: string): Promise<Conversation[]> {
     try {
-      const { data, error } = await supabase
-        .rpc('get_user_conversations', { user_uuid: userId });
+      // Récupérer les conversations où l'utilisateur est participant
+      const { data: conversations, error } = await supabase
+        .from('conversations')
+        .select(`
+          *,
+          vehicles!inner(brand, model, license_plate),
+          conversation_participants!inner(user_id),
+          messages(content, created_at, sender_id)
+        `)
+        .or(`owner_id.eq.${userId},reporter_id.eq.${userId}`)
+        .order('updated_at', { ascending: false });
 
       if (error) {
-        console.error('Erreur RPC get_user_conversations:', error);
+        console.error('Erreur récupération conversations:', error);
         throw error;
       }
 
-      if (!data) {
+      if (!conversations) {
         return [];
       }
 
-      return data.map((conv: any) => ({
-        id: conv.conversation_id,
-        vehicleId: conv.vehicle_id,
-        ownerId: conv.other_participant_id, // L'autre participant est soit owner soit reporter
-        reporterId: conv.other_participant_id, // Même chose ici, on s'occupera de la logique côté UI
-        status: conv.status as 'active' | 'resolved' | 'closed',
-        subject: conv.subject,
-        createdAt: conv.created_at,
-        updatedAt: conv.last_message_at || conv.created_at,
-        vehicleBrand: conv.vehicle_brand,
-        vehicleModel: conv.vehicle_model,
-        vehicleLicensePlate: conv.vehicle_license_plate,
-        otherParticipantId: conv.other_participant_id,
-        otherParticipantEmail: conv.other_participant_email,
-        lastMessageContent: conv.last_message_content,
-        lastMessageAt: conv.last_message_at,
-        unreadCount: conv.unread_count || 0,
-      }));
+      return conversations.map((conv: any) => {
+        // Trouver l'autre participant
+        const otherParticipant = conv.conversation_participants.find((p: any) => p.user_id !== userId);
+        const otherParticipantId = otherParticipant?.user_id;
+
+        // Récupérer le dernier message
+        const lastMessage = conv.messages && conv.messages.length > 0 
+          ? conv.messages[conv.messages.length - 1] 
+          : null;
+
+        // Compter les messages non lus
+        const unreadCount = conv.messages ? conv.messages.filter((msg: any) => 
+          msg.sender_id !== userId && !msg.is_read
+        ).length : 0;
+
+        return {
+          id: conv.id,
+          vehicleId: conv.vehicle_id,
+          ownerId: conv.owner_id,
+          reporterId: conv.reporter_id,
+          status: conv.status as 'active' | 'resolved' | 'closed',
+          subject: conv.subject,
+          createdAt: conv.created_at,
+          updatedAt: conv.updated_at,
+          resolvedAt: conv.resolved_at,
+          vehicleBrand: conv.vehicles?.brand,
+          vehicleModel: conv.vehicles?.model,
+          vehicleLicensePlate: conv.vehicles?.license_plate,
+          otherParticipantId: otherParticipantId,
+          otherParticipantEmail: null, // On ne récupère pas l'email pour l'instant
+          lastMessageContent: lastMessage?.content,
+          lastMessageAt: lastMessage?.created_at,
+          unreadCount: unreadCount,
+        };
+      });
     } catch (error) {
       console.error('Erreur récupération conversations:', error);
       throw new Error('Impossible de récupérer les conversations');
@@ -239,6 +291,11 @@ export class ChatService {
     senderId?: string;
   }): Promise<Message> {
     try {
+      console.log('[ChatService] Préparation envoi', {
+        conversationId: data.conversationId,
+        contentLength: data.content?.length,
+        messageType: data.messageType || 'text',
+      });
       // Obtenir l'ID de l'utilisateur actuel si non fourni
       const { data: { user } } = await supabaseClient.auth.getUser();
       const senderId = data.senderId || user?.id;
@@ -247,42 +304,67 @@ export class ChatService {
         throw new Error('Utilisateur non authentifié');
       }
 
-      // Utiliser la RPC securisée pour respecter la RLS côté messages
-      const { data: rpcMessage, error } = await supabaseClient
-        .rpc('send_message_if_participant', {
-          p_conversation_id: data.conversationId,
-          p_sender_id: senderId,
-          p_content: data.content,
-          p_message_type: data.messageType || 'text',
-        })
+      // Vérifier que l'utilisateur est bien participant de la conversation
+      const { data: participantCheck, error: participantError } = await supabaseClient
+        .from('conversation_participants')
+        .select('user_id')
+        .eq('conversation_id', data.conversationId)
+        .eq('user_id', senderId)
         .single();
 
-      if (error) throw error;
+      if (participantError || !participantCheck) {
+        throw new Error('Vous n\'êtes pas autorisé à envoyer des messages dans cette conversation');
+      }
 
-      // rpcMessage contient des clés msg_*. Convertir vers shape Message
+      console.log('[ChatService] Insertion message dans la table messages...');
+      // Insérer le message directement dans la table messages
+      const { data: newMessage, error } = await supabaseClient
+        .from('messages')
+        .insert({
+          conversation_id: data.conversationId,
+          sender_id: senderId,
+          content: data.content,
+          message_type: data.messageType || 'text',
+          metadata: data.metadata || null,
+          is_read: false
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[ChatService] Erreur insertion message:', error);
+        throw error;
+      }
+
+      // Mapper vers l'interface Message
       const message: Message = {
-        id: rpcMessage.msg_id,
-        conversationId: rpcMessage.msg_conversation_id,
-        senderId: rpcMessage.msg_sender_id,
-        content: rpcMessage.msg_content,
-        messageType: rpcMessage.msg_message_type,
-        metadata: rpcMessage.msg_metadata,
-        isRead: rpcMessage.msg_is_read,
-        createdAt: rpcMessage.msg_created_at,
+        id: newMessage.id,
+        conversationId: newMessage.conversation_id,
+        senderId: newMessage.sender_id,
+        content: newMessage.content,
+        messageType: newMessage.message_type,
+        metadata: newMessage.metadata,
+        isRead: newMessage.is_read,
+        createdAt: newMessage.created_at,
       };
 
       // Envoyer une notification push
       try {
+        console.log('[ChatService] Tentative envoi notification push...');
         await this.sendNotificationForMessage(message, senderId);
+        console.log('[ChatService] Notification push envoyée');
       } catch (notificationError) {
-        console.error('Erreur envoi notification:', notificationError);
+        console.error('[ChatService] Erreur envoi notification:', notificationError);
         // Ne pas faire échouer l'envoi du message si la notification échoue
       }
 
+      console.log('[ChatService] Envoi message OK', { id: message.id });
       return message;
     } catch (error) {
-      console.error('Erreur envoi message:', error);
-      throw new Error('Impossible d\'envoyer le message');
+      console.error('[ChatService] Erreur envoi message:', error);
+      // Propager un message d'erreur plus détaillé côté UI
+      const detailed = (error as any)?.message || 'Erreur inconnue';
+      throw new Error(`Impossible d'envoyer le message: ${detailed}`);
     }
   }
 

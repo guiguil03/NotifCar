@@ -250,10 +250,11 @@ export default function NotificationsScreen() {
       
       {/* Header avec gradient violet moderne (même style que l'onglet principal) */}
       <LinearGradient
-        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
+        colors={['#2633E1', '#1E9B7E', '#1E9B7E', '#26C29E', '#7DDAC5']}
+        locations={[0, 0.6, 0.7, 0.9, 1]}
         style={styles.headerGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        start={{ x: 0, y: 1 }}
+        end={{ x: 1, y: 0 }}
       >
         <Animated.View
           style={[
@@ -270,7 +271,7 @@ export default function NotificationsScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.logoGradient}
               >
-                <Ionicons name="notifications" size={32} color="#7C3AED" />
+                <Ionicons name="notifications" size={32} color="#2633E1" />
               </LinearGradient>
             </View>
           </View>
@@ -302,7 +303,7 @@ export default function NotificationsScreen() {
             <Ionicons 
               name="send" 
               size={20} 
-              color={activeTab === 'sent' ? 'white' : '#7C3AED'} 
+              color={activeTab === 'sent' ? 'white' : '#2633E1'} 
             />
             <ThemedText style={[
               styles.tabText,
@@ -322,7 +323,7 @@ export default function NotificationsScreen() {
             <Ionicons 
               name="mail" 
               size={20} 
-              color={activeTab === 'received' ? 'white' : '#7C3AED'} 
+              color={activeTab === 'received' ? 'white' : '#2633E1'} 
             />
             <ThemedText style={[
               styles.tabText,
@@ -533,25 +534,25 @@ const styles = StyleSheet.create({
   },
   welcomeSection: {
     alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 12,
   },
   greetingText: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 30,
+    fontWeight: '800',
     color: 'white',
-    marginBottom: 8,
+    marginBottom: 10,
     textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
   subtitleText: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
+    fontSize: 17,
+    color: 'rgba(255,255,255,0.95)',
     textAlign: 'center',
     lineHeight: 22,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   content: {
     flex: 1,
@@ -581,8 +582,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   activeTabButton: {
-    backgroundColor: '#7C3AED',
-    shadowColor: '#7C3AED',
+    backgroundColor: '#2633E1',
+    shadowColor: '#2633E1',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -592,7 +593,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     fontWeight: '600',
-    color: '#7C3AED',
+    color: '#2633E1',
   },
   activeTabText: {
     color: 'white',

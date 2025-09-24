@@ -162,7 +162,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   if (loading && messages.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#7C3AED" />
+        <ActivityIndicator size="large" color="#2633E1" />
         <Text style={styles.loadingText}>Chargement de la conversation...</Text>
       </View>
     );
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   myMessage: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#2633E1',
     alignSelf: 'flex-end',
     borderBottomRightRadius: 4,
   },
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#2633E1',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,

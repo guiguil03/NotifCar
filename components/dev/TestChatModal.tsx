@@ -85,7 +85,7 @@ export const TestChatModal: React.FC<TestChatModalProps> = ({ visible, onClose }
         <ScrollView style={styles.content}>
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="flask" size={20} color="#7C3AED" />
+              <Ionicons name="flask" size={20} color="#2633E1" />
               <Text style={styles.sectionTitle}>Mode Test</Text>
             </View>
             <Text style={styles.sectionDescription}>
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   testButton: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#2633E1',
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',

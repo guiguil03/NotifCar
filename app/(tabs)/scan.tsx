@@ -7,6 +7,7 @@ import { ChatService, Conversation } from '@/lib/chatService';
 import { QRCodeService } from '@/lib/qrCodeService';
 import { SignalizationService } from '@/lib/signalizationService';
 import { supabase } from '@/lib/supabase';
+import { VehicleService } from '@/lib/vehicleService';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -30,10 +31,11 @@ export default function ScanScreen() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [showConversations, setShowConversations] = useState(false);
+  const [isFormReady, setIsFormReady] = useState(false);
   
   const { createConversationFromQR } = useChat();
   
-  const primaryColor = useThemeColor({}, 'primary');
+  // const primaryColor = useThemeColor({}, 'primary');
   
   const handleBack = () => {
     router.back();
@@ -91,6 +93,28 @@ export default function ScanScreen() {
     return () => pulseAnimation.stop();
   }, [permission, requestPermission, fadeAnim, slideAnim, pulseAnim]);
 
+  // Suivi de l'état "prêt à envoyer" du formulaire (instrumentation/logs)
+  useEffect(() => {
+    const ready = Boolean(
+      selectedReason ||
+      (customReason && customReason.trim().length > 0) ||
+      (vehicleIssue && vehicleIssue.trim().length > 0) ||
+      (messageText && messageText.trim().length > 0)
+    );
+    if (ready !== isFormReady) {
+      console.log('[ScanForm] Changement readiness', {
+        ready,
+        selectedReason,
+        customReasonLen: customReason?.length || 0,
+        vehicleIssueLen: vehicleIssue?.length || 0,
+        messageLen: messageText?.length || 0,
+        urgency,
+        scannedVehicleIdPresent: Boolean(scannedVehicleId),
+      });
+      setIsFormReady(ready);
+    }
+  }, [selectedReason, customReason, vehicleIssue, messageText, urgency, scannedVehicleId, isFormReady]);
+
   const loadConversations = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -108,10 +132,20 @@ export default function ScanScreen() {
     
     setScanned(true);
     
+    console.log('[Scan] QR Code scanné:', {
+      type,
+      data: data?.substring(0, 100) + '...',
+      dataLength: data?.length,
+    });
     
     // Validation du QR code avec le service
     const validation = QRCodeService.validateQRCode(data);
     
+    console.log('[Scan] Validation QR:', {
+      isValid: validation.isValid,
+      vehicleId: validation.vehicleId,
+      ownerId: validation.ownerId,
+    });
     
     if (validation.isValid && validation.vehicleId && validation.ownerId) {
       setScannedVehicleId(data); // Stocker le QR code complet
@@ -154,10 +188,24 @@ export default function ScanScreen() {
   };
 
   const handleSendMessage = async () => {
-    if (!scannedVehicleId || sendingMessage) return;
+    console.log('[ScanForm] Tentative d\'envoi', {
+      scannedVehicleIdPresent: Boolean(scannedVehicleId),
+      sendingMessage,
+      isFormReady,
+      selectedReason,
+      customReasonLen: customReason?.length || 0,
+      vehicleIssueLen: vehicleIssue?.length || 0,
+      urgency,
+      messageLen: messageText?.length || 0,
+    });
+    if (!scannedVehicleId || sendingMessage || !isFormReady) {
+      console.log('[ScanForm] Envoi bloqué (conditions non remplies)');
+      return;
+    }
 
     setSendingMessage(true);
     try {
+      console.log('[ScanForm] Validation QR + préparation données...');
       // Valider le QR code et extraire l'ID du véhicule
       const qrValidation = QRCodeService.validateQRCode(scannedVehicleId);
       
@@ -165,14 +213,37 @@ export default function ScanScreen() {
         throw new Error('QR code invalide. Assurez-vous de scanner un QR code NotifCar valide.');
       }
 
-      // Trouver le véhicule par son ID
-      const { data: vehicle, error: vehicleError } = await supabase
-        .from('vehicles')
-        .select('id, owner_id, brand, model, license_plate')
-        .eq('id', qrValidation.vehicleId)
-        .single();
+      // Rechercher le véhicule par QR code d'abord, puis par ID si nécessaire
+      console.log('[Scan] Recherche véhicule par QR code:', scannedVehicleId);
+      
+      // Vérifier l'authentification d'abord
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      console.log('[Scan] Utilisateur authentifié:', {
+        hasUser: !!user,
+        userId: user?.id,
+        authError: authError?.message
+      });
+      
+      // Essayer d'abord de trouver le véhicule par QR code complet
+      let vehicle = await VehicleService.getVehicleByQRCode(scannedVehicleId);
+      
+      // Si pas trouvé par QR code, essayer par ID du véhicule
+      if (!vehicle && qrValidation.vehicleId) {
+        console.log('[Scan] Véhicule non trouvé par QR code, recherche par ID:', qrValidation.vehicleId);
+        vehicle = await VehicleService.getVehicleById(qrValidation.vehicleId);
+      }
 
-      if (vehicleError || !vehicle) {
+      console.log('[Scan] Résultat recherche véhicule:', {
+        vehicleFound: !!vehicle,
+        vehicle: vehicle ? {
+          id: vehicle.id,
+          brand: vehicle.brand,
+          model: vehicle.model,
+          licensePlate: vehicle.licensePlate
+        } : null
+      });
+
+      if (!vehicle) {
         throw new Error('Véhicule non trouvé. Le QR code semble valide mais le véhicule n\'existe plus.');
       }
 
@@ -216,6 +287,7 @@ export default function ScanScreen() {
       }
 
       // Faire les deux actions en parallèle : créer la conversation ET enregistrer la signalisation
+      console.log('[ScanForm] Soumission parallèle: création conversation + signalisation');
       const [conversation, signalization] = await Promise.all([
         // 1. Créer la conversation et envoyer le message privé
         createConversationFromQR(scannedVehicleId, structuredMessage),
@@ -232,6 +304,10 @@ export default function ScanScreen() {
       ]);
       
       if (conversation && signalization) {
+        console.log('[ScanForm] Succès soumission', {
+          conversationId: conversation.id,
+          signalizationId: signalization.id,
+        });
         // Lier la signalisation à la conversation
         await SignalizationService.updateSignalizationConversation(signalization.id, conversation.id);
         
@@ -258,6 +334,7 @@ export default function ScanScreen() {
         throw new Error('Erreur lors de la création de la signalisation ou de la conversation');
       }
     } catch (error) {
+      console.error('[ScanForm] Erreur soumission formulaire:', error);
       Alert.alert('Erreur', 'Impossible d\'envoyer le message. Veuillez réessayer.');
     } finally {
       setSendingMessage(false);
@@ -306,8 +383,11 @@ export default function ScanScreen() {
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={gradientStart} />
         <LinearGradient
-          colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
+          colors={['#2633E1', '#1E9B7E', '#1E9B7E', '#26C29E', '#7DDAC5']}
+          locations={[0, 0.6, 0.7, 0.9, 1]}
           style={styles.loadingContainer}
+          start={{ x: 0, y: 1 }}
+          end={{ x: 1, y: 0 }}
         >
           <View style={styles.loadingContent}>
             <Animated.View
@@ -335,8 +415,11 @@ export default function ScanScreen() {
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={gradientStart} />
         <LinearGradient
-          colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
+          colors={['#2633E1', '#1E9B7E', '#1E9B7E', '#26C29E', '#7DDAC5']}
+          locations={[0, 0.6, 0.7, 0.9, 1]}
           style={styles.permissionContainer}
+          start={{ x: 0, y: 1 }}
+          end={{ x: 1, y: 0 }}
         >
           <Animated.View
             style={[
@@ -536,13 +619,13 @@ export default function ScanScreen() {
           >
             <View style={styles.messageInfo}>
               <View style={styles.messageInfoIcon}>
-                <Ionicons name="car" size={24} color="#7C3AED" />
+              <Ionicons name="car" size={24} color="#2633E1" />
               </View>
               <View style={styles.messageInfoContent}>
                 <Text style={styles.messageInfoTitle}>Contact du propriétaire</Text>
-                <Text style={styles.messageInfoText}>
+              <Text style={styles.messageInfoText}>
                   Vous contactez {targetDisplayName}
-                </Text>
+              </Text>
               </View>
             </View>
 
@@ -556,7 +639,7 @@ export default function ScanScreen() {
                   onPress={() => setSelectedReason('Stationnement gênant')}
                 >
                   <View style={[styles.reasonIcon, selectedReason === 'Stationnement gênant' && styles.reasonIconSelected]}>
-                    <Ionicons name="car-outline" size={24} color={selectedReason === 'Stationnement gênant' ? 'white' : '#7C3AED'} />
+                    <Ionicons name="car-outline" size={24} color={selectedReason === 'Stationnement gênant' ? 'white' : '#2633E1'} />
                   </View>
                   <Text style={[styles.reasonText, selectedReason === 'Stationnement gênant' && styles.reasonTextSelected]}>
                     Stationnement gênant
@@ -613,7 +696,7 @@ export default function ScanScreen() {
               </View>
 
               {selectedReason === 'Autre' && (
-                <TextInput
+            <TextInput
                   style={styles.customInput}
                   value={customReason}
                   onChangeText={setCustomReason}
@@ -640,7 +723,7 @@ export default function ScanScreen() {
 
             {/* Section Niveau d'urgence */}
             <View style={styles.formSection}>
-              <Text style={styles.sectionTitle}>⚡ Niveau d'urgence</Text>
+              <Text style={styles.sectionTitle}>{`⚡ Niveau d'urgence`}</Text>
               
               <View style={styles.urgencyOptions}>
                 <TouchableOpacity
@@ -680,21 +763,21 @@ export default function ScanScreen() {
               <Text style={styles.sectionTitle}>💬 Message personnalisé (optionnel)</Text>
               <TextInput
                 style={styles.textAreaInput}
-                value={messageText}
-                onChangeText={setMessageText}
+              value={messageText}
+              onChangeText={setMessageText}
                 placeholder="Ajoutez des détails supplémentaires..."
-                placeholderTextColor="#999"
-                multiline
+              placeholderTextColor="#999"
+              multiline
                 numberOfLines={3}
-                textAlignVertical="top"
+              textAlignVertical="top"
                 maxLength={500}
-              />
-              <View style={styles.characterCount}>
-                <Text style={styles.characterCountText}>
-                  {messageText.length}/500
-                </Text>
-              </View>
+            />
+            <View style={styles.characterCount}>
+              <Text style={styles.characterCountText}>
+                {messageText.length}/500
+              </Text>
             </View>
+          </View>
           </ScrollView>
 
           <View style={styles.modalActions}>
@@ -708,10 +791,10 @@ export default function ScanScreen() {
             <TouchableOpacity
               style={[
                 styles.sendButton,
-                (!selectedReason && !customReason.trim() && !vehicleIssue.trim() && !messageText.trim()) && styles.sendButtonDisabled
+                !isFormReady && styles.sendButtonDisabled
               ]}
               onPress={handleSendMessage}
-              disabled={(!selectedReason && !customReason.trim() && !vehicleIssue.trim() && !messageText.trim()) || sendingMessage}
+              disabled={!isFormReady || sendingMessage}
             >
               {sendingMessage ? (
                 <Text style={styles.sendButtonText}>Envoi...</Text>
@@ -1173,9 +1256,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 18,
     borderRadius: 16,
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#2633E1',
     alignItems: 'center',
-    shadowColor: '#7C3AED',
+    shadowColor: '#2633E1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -1336,8 +1419,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   reasonOptionSelected: {
-    backgroundColor: '#7C3AED',
-    shadowColor: '#7C3AED',
+    backgroundColor: '#2633E1',
+    shadowColor: '#2633E1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -1411,8 +1494,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   urgencyOptionSelected: {
-    backgroundColor: '#7C3AED',
-    shadowColor: '#7C3AED',
+    backgroundColor: '#2633E1',
+    shadowColor: '#2633E1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,

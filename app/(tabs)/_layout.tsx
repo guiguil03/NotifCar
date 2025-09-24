@@ -16,8 +16,8 @@ export default function TabLayout() {
     <AuthGuard>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: '#FFFFFF', // Blanc pour contraster avec le violet
-          tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].accent,
+          tabBarActiveTintColor: '#FFFFFF', // Blanc pour l'onglet actif
+          tabBarInactiveTintColor: 'rgba(255,255,255,0.6)', // Blanc 60% pour inactifs
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,

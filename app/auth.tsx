@@ -100,7 +100,7 @@ export default function AuthScreen() {
       
       {/* Background avec gradient violet moderne */}
       <LinearGradient
-        colors={['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED']}
+        colors={['#2633E1', '#1E9B7E', '#26C29E', '#7DDAC5']}
         style={styles.backgroundGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -133,7 +133,7 @@ export default function AuthScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.logoGradient}
               >
-                <Ionicons name="car-sport" size={48} color="#7C3AED" />
+                <Ionicons name="car-sport" size={48} color="#2633E1" />
               </LinearGradient>
             </View>
             
@@ -268,7 +268,7 @@ export default function AuthScreen() {
                   disabled={loading}
                 >
                   <LinearGradient
-                    colors={['#7C3AED', '#5B21B6', '#4C1D95']}
+                    colors={['#2633E1', '#2633E1']}
                     style={styles.authButtonGradient}
                   >
                     {loading ? (
