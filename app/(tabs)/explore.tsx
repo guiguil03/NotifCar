@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/ThemedText';
 import { useAuth } from '@/contexts/AuthContext';
+// import { useThemeColor } from '@/hooks/useThemeColor';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { StatsService, UserStats } from '@/lib/statsService';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,11 +11,11 @@ import { Alert, Animated, RefreshControl, ScrollView, StatusBar, StyleSheet, Tou
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
-  const primaryColor = useThemeColor({}, 'primary');
-  const secondaryColor = useThemeColor({}, 'secondary');
-  const successColor = useThemeColor({}, 'success');
-  const warningColor = useThemeColor({}, 'warning');
-  const errorColor = useThemeColor({}, 'error');
+  // const primaryColor = useThemeColor({}, 'primary');
+  // const secondaryColor = useThemeColor({}, 'secondary');
+  // const successColor = useThemeColor({}, 'success');
+  // const warningColor = useThemeColor({}, 'warning');
+  // const errorColor = useThemeColor({}, 'error');
 
   // État pour les statistiques
   const [stats, setStats] = useState<UserStats | null>(null);
@@ -108,47 +109,22 @@ export default function ProfileScreen() {
     Alert.alert('À propos', 'Notifcar v1.0.0\n\nApplication de notification automobile');
   };
 
+  const primaryColor = useThemeColor({}, 'primary');
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
+      <StatusBar barStyle="light-content" backgroundColor={primaryColor} />
       
-      {/* Header avec gradient violet moderne */}
+      {/* Header simple avec gradient */}
       <LinearGradient
-        colors={['#2633E1', '#1E9B7E', '#1E9B7E', '#26C29E', '#7DDAC5']}
-        locations={[0, 0.6, 0.7, 0.9, 1]}
-        style={styles.headerGradient}
-        start={{ x: 0, y: 1 }}
-        end={{ x: 1, y: 0 }}
+        colors={['#2633E1', '#1E9B7E', '#26C29E']}
+        style={{ paddingTop: 48, paddingHorizontal: 20, paddingBottom: 24 }}
       >
-        <Animated.View
-          style={[
-            styles.header,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-        >
-          <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC']}
-                style={styles.avatarGradient}
-              >
-                <Ionicons name="person" size={40} color="#2633E1" />
-              </LinearGradient>
-            </View>
-            
-            <View style={styles.userInfo}>
-              <ThemedText style={styles.userName}>
-                {user?.user_metadata?.full_name || 'Utilisateur'}
+        <ThemedText style={{ fontSize: 26, fontWeight: '700', color: 'white', marginBottom: 6 }}>
+          Profil
         </ThemedText>
-              <ThemedText style={styles.userEmail}>
-                {user?.email || 'email@example.com'}
+        <ThemedText style={{ fontSize: 15, color: 'rgba(255,255,255,0.9)' }}>
+          {user?.user_metadata?.full_name || 'Utilisateur'} • {user?.email || 'email@example.com'}
         </ThemedText>
-            </View>
-          </View>
-        </Animated.View>
       </LinearGradient>
 
       <ScrollView 

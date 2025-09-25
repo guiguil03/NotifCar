@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform, View } from 'react-native';
+import { Platform } from 'react-native';
 
 import AuthGuard from '@/components/AuthGuard';
 import { HapticTab } from '@/components/HapticTab';
@@ -24,7 +24,7 @@ export default function TabLayout() {
           tabBarStyle: Platform.select({
             ios: {
               position: 'absolute',
-              backgroundColor: 'rgba(139, 92, 246, 0.95)', // Violet avec transparence
+              backgroundColor: Colors[colorScheme ?? 'light'].primary, // Aligne avec la DA (login)
               borderTopWidth: 0,
               elevation: 0,
               shadowOpacity: 0.3,
@@ -79,40 +79,6 @@ export default function TabLayout() {
         options={{
           title: 'Messages',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="notifications"
-        options={{
-          title: 'Notifications',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ position: 'relative' }}>
-              <IconSymbol size={28} name="bell.fill" color={color} />
-              {focused && (
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: -2,
-                    right: -2,
-                    backgroundColor: Colors[colorScheme ?? 'light'].alert,
-                    borderRadius: 8,
-                    minWidth: 16,
-                    height: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingHorizontal: 4,
-                    shadowColor: Colors[colorScheme ?? 'light'].alert,
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 4,
-                    elevation: 3,
-                  }}
-                >
-                  <View style={{ width: 6, height: 6, backgroundColor: 'white', borderRadius: 3 }} />
-                </View>
-              )}
-            </View>
-          ),
         }}
       />
       <Tabs.Screen

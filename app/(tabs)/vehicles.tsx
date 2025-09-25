@@ -45,9 +45,9 @@ export default function VehiclesScreen() {
 
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
 
-  const handleBack = () => {
-    setShowQRGenerator(false);
-  };
+  // const handleBack = () => {
+  //   setShowQRGenerator(false);
+  // };
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -60,7 +60,7 @@ export default function VehiclesScreen() {
   // const [loading, setLoading] = useState(true);
 
   const primaryColor = useThemeColor({}, "primary");
-  const gradientStart = useThemeColor({}, "gradientStart");
+  // const gradientStart = useThemeColor({}, "gradientStart");
   const gradientEnd = useThemeColor({}, "gradientEnd");
 
   // const successColor = useThemeColor({}, "success");
@@ -284,59 +284,34 @@ export default function VehiclesScreen() {
     return (
       <ThemedView style={styles.container}>
         <LinearGradient
-          colors={[gradientStart, gradientEnd]}
-          style={[styles.headerGradient, { paddingTop: insets.top + 16 }]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          colors={['#2633E1', '#1E9B7E', '#26C29E']}
+          style={{ paddingTop: insets.top + 28, paddingHorizontal: 20, paddingBottom: 20 }}
         >
-          <Animated.View
-            style={[
-              styles.header,
-
-              {
-                opacity: fadeAnim,
-
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            <View style={styles.vehicleFormHeaderTop}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={handleVehicleCancel}
-              >
-                <View style={styles.backButtonGradient}>
-                  <Ionicons name="arrow-back" size={20} color="white" />
-                </View>
-              </TouchableOpacity>
-
-              <View style={styles.logoContainer}>
-                <LinearGradient
-                  colors={["#FFFFFF", "#F8FAFC"]}
-                  style={styles.logoGradient}
-                >
-                  <Ionicons name="car-sport" size={32} color="#7C3AED" />
-                </LinearGradient>
+          <View style={styles.headerInlineRow}>
+            <TouchableOpacity
+              onPress={handleVehicleCancel}
+              style={styles.headerButton}
+              activeOpacity={0.8}
+            >
+              <View style={styles.headerButtonInner}>
+                <Ionicons name="arrow-back" size={20} color="white" />
               </View>
-
-              <View style={styles.placeholder} />
-            </View>
-
-            <View style={styles.welcomeSection}>
-              <ThemedText style={styles.greetingText}>
-                {editingVehicle ? "Modifier" : "Nouveau véhicule"}
-              </ThemedText>
-
-              <ThemedText style={styles.subtitleText}>
-                {editingVehicle
-                  ? "Modifiez les informations"
-                  : "Ajoutez un véhicule à votre flotte"}
-              </ThemedText>
-            </View>
-          </Animated.View>
+            </TouchableOpacity>
+            <ThemedText style={styles.headerInlineTitle}>
+              {editingVehicle ? 'Modifier le véhicule' : 'Nouveau véhicule'}
+            </ThemedText>
+            <View style={styles.headerRightSpacer} />
+          </View>
+          <ThemedText style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)' }}>
+            {editingVehicle ? 'Modifiez les informations' : 'Ajoutez un véhicule à votre flotte'}
+          </ThemedText>
         </LinearGradient>
 
-        <ScrollView style={styles.content}>
+        <ScrollView style={styles.content}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <VehicleForm
             onSubmit={handleVehicleSubmit}
             onCancel={handleVehicleCancel}
@@ -369,52 +344,30 @@ export default function VehiclesScreen() {
     return (
       <ThemedView style={styles.container}>
         <LinearGradient
-          colors={[gradientStart, gradientEnd]}
-          style={[styles.headerGradient, { paddingTop: insets.top + 16 }]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          colors={['#2633E1', '#1E9B7E', '#26C29E']}
+          style={{ paddingTop: insets.top + 28, paddingHorizontal: 20, paddingBottom: 20 }}
         >
-          <Animated.View
-            style={[
-              styles.header,
-
-              {
-                opacity: fadeAnim,
-
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            <View style={styles.qrHeaderTop}>
-              <TouchableOpacity
-                style={styles.qrBackButton}
-                onPress={handleBack}
-              >
-                <View style={styles.backButtonGradient}>
-                  <Ionicons name="arrow-back" size={20} color="white" />
-                </View>
-              </TouchableOpacity>
-
-              <View style={styles.logoContainer}>
-                <LinearGradient
-                  colors={["#FFFFFF", "#F8FAFC"]}
-                  style={styles.logoGradient}
-                >
-                  <Ionicons name="qr-code" size={32} color="#7C3AED" />
-                </LinearGradient>
+          <View style={styles.headerInlineRow}>
+            <TouchableOpacity
+              onPress={() => {
+                setShowQRGenerator(false);
+                setSelectedVehicle(null);
+              }}
+              style={styles.headerButton}
+              activeOpacity={0.8}
+            >
+              <View style={styles.headerButtonInner}>
+                <Ionicons name="arrow-back" size={20} color="white" />
               </View>
-            </View>
-
-            <View style={styles.welcomeSection}>
-              <ThemedText style={styles.greetingText}>
-                QR Code - {selectedVehicle.name}
-              </ThemedText>
-
-              <ThemedText style={styles.subtitleText}>
-                Scannez ce code pour signaler un problème
-              </ThemedText>
-            </View>
-          </Animated.View>
+            </TouchableOpacity>
+            <ThemedText style={styles.headerInlineTitle}>
+              {`QR Code - ${selectedVehicle.name}`}
+            </ThemedText>
+            <View style={styles.headerRightSpacer} />
+          </View>
+          <ThemedText style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)' }}>
+            Scannez ce code pour signaler un problème
+          </ThemedText>
         </LinearGradient>
 
         <ScrollView
@@ -443,41 +396,11 @@ export default function VehiclesScreen() {
   return (
     <ThemedView style={styles.container}>
       <LinearGradient
-        colors={[gradientStart, gradientEnd]}
-        style={[styles.headerGradient, { paddingTop: insets.top + 16 }]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        colors={['#2633E1', '#1E9B7E', '#26C29E']}
+        style={{ paddingTop: insets.top + 28, paddingHorizontal: 20, paddingBottom: 20 }}
       >
-        <Animated.View
-          style={[
-            styles.header,
-
-            {
-              opacity: fadeAnim,
-
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-        >
-          <View style={styles.headerTop}>
-            <View style={styles.logoContainer}>
-              <LinearGradient
-                colors={["#FFFFFF", "#F8FAFC"]}
-                style={styles.logoGradient}
-              >
-                <Ionicons name="car-sport" size={32} color="#7C3AED" />
-              </LinearGradient>
-            </View>
-          </View>
-
-          <View style={styles.welcomeSection}>
-            <ThemedText style={styles.greetingText}>Mes Véhicules</ThemedText>
-
-            <ThemedText style={styles.subtitleText}>
-              Gérez et protégez vos véhicules
-            </ThemedText>
-          </View>
-        </Animated.View>
+        <ThemedText style={{ fontSize: 22, fontWeight: '700', color: 'white', marginBottom: 4 }}>Mes Véhicules</ThemedText>
+        <ThemedText style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)' }}>Gérez et protégez vos véhicules</ThemedText>
       </LinearGradient>
 
       <ScrollView
@@ -485,6 +408,10 @@ export default function VehiclesScreen() {
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
       >
         {/* Bouton Ajouter */}
 
@@ -517,7 +444,6 @@ export default function VehiclesScreen() {
           <Animated.View
             style={[
               styles.emptyContainer,
-
               {
                 opacity: fadeAnim,
 
@@ -525,10 +451,7 @@ export default function VehiclesScreen() {
               },
             ]}
           >
-            <ScrollView
-              contentContainerStyle={styles.emptyScrollContent}
-              showsVerticalScrollIndicator={false}
-            >
+            <View style={styles.emptyScrollContent}>
               {/* Hero Section */}
 
               <View style={styles.heroSection}>
@@ -540,7 +463,6 @@ export default function VehiclesScreen() {
                     <Animated.View
                       style={[
                         styles.heroIcon,
-
                         {
                           transform: [
                             {
@@ -761,7 +683,7 @@ export default function VehiclesScreen() {
                   />
                 </LinearGradient>
               </View>
-            </ScrollView>
+            </View>
           </Animated.View>
         ) : (
           vehicles.map((vehicle, index) => (
@@ -769,7 +691,6 @@ export default function VehiclesScreen() {
               key={vehicle.id}
               style={[
                 styles.vehicleCard,
-
                 cardAnimations[index]
                   ? {
                       opacity: cardAnimations[index],
@@ -1831,5 +1752,35 @@ const styles = StyleSheet.create({
     fontWeight: "500",
 
     color: "#6B7280",
+  },
+  headerInlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  headerButton: {
+    padding: 4,
+    borderRadius: 18,
+  },
+  headerButtonInner: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  headerInlineTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: 'white',
+    textAlign: 'center',
+  },
+  headerRightSpacer: {
+    width: 36,
+    height: 36,
   },
 });

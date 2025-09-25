@@ -383,8 +383,8 @@ export default function ScanScreen() {
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={gradientStart} />
         <LinearGradient
-          colors={['#2633E1', '#1E9B7E', '#1E9B7E', '#26C29E', '#7DDAC5']}
-          locations={[0, 0.6, 0.7, 0.9, 1]}
+          colors={['#2633E1', '#1E9B7E', '#26C29E']}
+          locations={[0, 0.5, 1]}
           style={styles.loadingContainer}
           start={{ x: 0, y: 1 }}
           end={{ x: 1, y: 0 }}
@@ -415,8 +415,8 @@ export default function ScanScreen() {
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={gradientStart} />
         <LinearGradient
-          colors={['#2633E1', '#1E9B7E', '#1E9B7E', '#26C29E', '#7DDAC5']}
-          locations={[0, 0.6, 0.7, 0.9, 1]}
+          colors={['#2633E1', '#1E9B7E', '#26C29E']}
+          locations={[0, 0.5, 1]}
           style={styles.permissionContainer}
           start={{ x: 0, y: 1 }}
           end={{ x: 1, y: 0 }}
@@ -475,47 +475,48 @@ export default function ScanScreen() {
       >
         {/* Overlay avec design sophistiqué */}
         <View style={styles.overlay}>
-          {/* Header avec gradient */}
+          {/* Header simple avec gradient */}
           <LinearGradient
-            colors={['rgba(30,27,75,0.9)', 'rgba(49,46,129,0.7)', 'rgba(124,58,237,0.3)', 'transparent']}
-            style={styles.headerGradient}
+            colors={['#2633E1', '#1E9B7E', '#26C29E']}
+            style={{ paddingTop: 28, paddingHorizontal: 20, paddingBottom: 20 }}
           >
-            <Animated.View
-              style={[
-                styles.header,
-                {
-                  opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }]
-                }
-              ]}
-            >
-              <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                <LinearGradient
-                  colors={['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
-                  style={styles.backButtonGradient}
-                >
-                  <Ionicons name="arrow-back" size={24} color="#1F2937" />
-                </LinearGradient>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <TouchableOpacity 
+                style={{ 
+                  backgroundColor: 'rgba(255,255,255,0.2)', 
+                  borderRadius: 20, 
+                  padding: 8,
+                  width: 40,
+                  height: 40,
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }} 
+                onPress={handleBack}
+              >
+                <Ionicons name="arrow-back" size={20} color="white" />
               </TouchableOpacity>
               
-              <ThemedText style={styles.headerTitle}>Scanner QR Code</ThemedText>
+              <ThemedText style={{ fontSize: 18, fontWeight: '700', color: 'white' }}>Scanner QR Code</ThemedText>
               
               <TouchableOpacity
-                style={styles.flashButton}
+                style={{ 
+                  backgroundColor: flashOn ? 'rgba(251,146,60,0.8)' : 'rgba(255,255,255,0.2)', 
+                  borderRadius: 20, 
+                  padding: 8,
+                  width: 40,
+                  height: 40,
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
                 onPress={() => setFlashOn(!flashOn)}
               >
-                <LinearGradient
-                  colors={flashOn ? [alertColor, '#FB923C'] : ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
-                  style={styles.flashButtonGradient}
-                >
-                  <Ionicons 
-                    name={flashOn ? "flash" : "flash-off"} 
-                    size={24} 
-                    color={flashOn ? "white" : "#1F2937"} 
-                  />
-                </LinearGradient>
+                <Ionicons 
+                  name={flashOn ? "flash" : "flash-off"} 
+                  size={20} 
+                  color="white" 
+                />
               </TouchableOpacity>
-            </Animated.View>
+            </View>
           </LinearGradient>
 
           {/* Zone de scan avec design premium */}

@@ -1,19 +1,27 @@
 import { ThemedText } from '@/components/ThemedText';
 import { useAuth } from '@/contexts/AuthContext';
-// import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import { Signalization, SignalizationService } from '@/lib/signalizationService';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, Modal, RefreshControl, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
   const insets = useSafeAreaInsets();
+  const primaryColor = useThemeColor({}, 'primary');
+  
+  // États pour les notifications
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [sentSignalizations, setSentSignalizations] = useState<Signalization[]>([]);
+  const [receivedSignalizations, setReceivedSignalizations] = useState<Signalization[]>([]);
+  const [activeTab, setActiveTab] = useState<'sent' | 'received'>('sent');
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
   // const primaryColor = useThemeColor({}, 'primary');
   // const secondaryColor = useThemeColor({}, 'secondary');
@@ -109,7 +117,32 @@ export default function HomeScreen() {
   };
 
   const handleNotifications = () => {
-    router.push('/(tabs)/notifications');
+    setShowNotifications(true);
+    loadSignalizations();
+  };
+
+  const loadSignalizations = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setLoading(true);
+      const [sent, received] = await Promise.all([
+        SignalizationService.getUserSignalizations(user.id),
+        SignalizationService.getReceivedSignalizations(user.id)
+      ]);
+      setSentSignalizations(sent);
+      setReceivedSignalizations(received);
+    } catch (error) {
+      console.error('Erreur chargement signalisations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefreshNotifications = async () => {
+    setRefreshing(true);
+    await loadSignalizations();
+    setRefreshing(false);
   };
 
   // const handleProfile = () => {
@@ -141,45 +174,17 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E1B4B" />
+      <StatusBar barStyle="light-content" backgroundColor={primaryColor} />
       
-      {/* Header avec gradient violet moderne */}
+      {/* Header simple avec gradient */}
       <LinearGradient
-        colors={['#2633E1', '#1E9B7E', '#1E9B7E', '#26C29E', '#7DDAC5']}
-        locations={[0, 0.6, 0.7, 0.9, 1]}
-        style={[styles.headerGradient, { paddingTop: insets.top + 16 }]}
-        start={{ x: 0, y: 1 }}
-        end={{ x: 1, y: 0 }}
+        colors={['#2633E1', '#1E9B7E', '#26C29E']}
+        style={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 20 }}
       >
-        <Animated.View
-          style={[
-            styles.header,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: headerSlideAnim }]
-            }
-          ]}
-        >
-          <View style={styles.headerTop}>
-            <View style={styles.logoContainer}>
-              <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC']}
-                style={styles.logoGradient}
-              >
-                <Ionicons name="car-sport" size={32} color="#2633E1" />
-              </LinearGradient>
-            </View>
-          </View>
-          
-          <View style={styles.welcomeSection}>
-            <ThemedText style={styles.greetingText}>
-              {getGreeting()}{user?.user_metadata?.full_name ? ` ${user.user_metadata.full_name.split(' ')[0]}` : ''} !
-            </ThemedText>
-            <ThemedText style={styles.subtitleText}>
-              Votre sécurité automobile en un clic
-            </ThemedText>
-          </View>
-        </Animated.View>
+        <ThemedText style={{ fontSize: 24, fontWeight: '700', color: 'white', marginBottom: 4 }}>
+          {getGreeting()}{user?.user_metadata?.full_name ? ` ${user.user_metadata.full_name.split(' ')[0]}` : ''}
+        </ThemedText>
+        <ThemedText style={{ fontSize: 15, color: 'rgba(255,255,255,0.9)' }}>Votre sécurité automobile en un clic</ThemedText>
       </LinearGradient>
 
       <ScrollView 
@@ -372,79 +377,178 @@ export default function HomeScreen() {
           </View>
         </Animated.View>
 
-        {/* Section fonctionnalités */}
-        <Animated.View 
-          style={[
-            styles.featuresContainer,
-            {
-              opacity: cardAnimations[3],
-              transform: [{
-                translateY: cardAnimations[3].interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [30, 0]
-                })
-              }]
-            }
-          ]}
-        >
-          <ThemedText style={styles.sectionTitle}>Fonctionnalités</ThemedText>
-          
-          <View style={styles.featuresGrid}>
-            <View style={styles.featureCard}>
-              <LinearGradient
-                colors={['#E9D5FF', '#DDD6FE']}
-                style={styles.featureGradient}
-              >
-                <Ionicons name="qr-code-outline" size={32} color="#2633E1" />
-                <ThemedText style={styles.featureTitle}>Scan QR</ThemedText>
-                <ThemedText style={styles.featureDescription}>
-                  Scanner et notifier instantanément
-                </ThemedText>
-              </LinearGradient>
-            </View>
-            
-            <View style={styles.featureCard}>
-              <LinearGradient
-                colors={['#FEF3C7', '#FDE68A']}
-                style={styles.featureGradient}
-              >
-                <Ionicons name="notifications-outline" size={32} color="#F59E0B" />
-                <ThemedText style={styles.featureTitle}>Alertes</ThemedText>
-                <ThemedText style={styles.featureDescription}>
-                  Recevez des notifications en temps réel
-                </ThemedText>
-              </LinearGradient>
-            </View>
-            
-            <View style={styles.featureCard}>
-              <LinearGradient
-                colors={['#D1FAE5', '#A7F3D0']}
-                style={styles.featureGradient}
-              >
-                <Ionicons name="shield-outline" size={32} color="#10B981" />
-                <ThemedText style={styles.featureTitle}>Sécurité</ThemedText>
-                <ThemedText style={styles.featureDescription}>
-                  Protection maximale de vos données
-                </ThemedText>
-              </LinearGradient>
-            </View>
-            
-            <View style={styles.featureCard}>
-              <LinearGradient
-                colors={['#DBEAFE', '#BFDBFE']}
-                style={styles.featureGradient}
-              >
-                <Ionicons name="cloud-outline" size={32} color="#3B82F6" />
-                <ThemedText style={styles.featureTitle}>Cloud</ThemedText>
-                <ThemedText style={styles.featureDescription}>
-                  Synchronisation automatique
-                </ThemedText>
-              </LinearGradient>
-            </View>
-          </View>
-        </Animated.View>
-
+        {/* Section fonctionnalités SUPPRIMÉE */}
+        
       </ScrollView>
+
+      {/* Modal des notifications */}
+      <Modal
+        visible={showNotifications}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowNotifications(false)}
+      >
+        <View style={styles.modalContainer}>
+          <LinearGradient
+            colors={['#2633E1', '#1E9B7E', '#26C29E']}
+            style={styles.modalHeader}
+          >
+            <View style={styles.modalHeaderContent}>
+              <TouchableOpacity 
+                onPress={() => setShowNotifications(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color="white" />
+              </TouchableOpacity>
+              <ThemedText style={styles.modalTitle}>Mes Signalisations</ThemedText>
+              <View style={styles.modalPlaceholder} />
+            </View>
+            
+            <View style={styles.tabsContainer}>
+              <TouchableOpacity
+                style={[styles.tabButton, activeTab === 'sent' && styles.activeTabButton]}
+                onPress={() => setActiveTab('sent')}
+              >
+                <ThemedText style={[styles.tabText, activeTab === 'sent' && styles.activeTabText]}>
+                  Envoyées
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tabButton, activeTab === 'received' && styles.activeTabButton]}
+                onPress={() => setActiveTab('received')}
+              >
+                <ThemedText style={[styles.tabText, activeTab === 'received' && styles.activeTabText]}>
+                  Reçues
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+
+          <ScrollView
+            style={styles.modalContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefreshNotifications}
+                colors={[primaryColor]}
+                tintColor={primaryColor}
+              />
+            }
+          >
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ThemedText style={styles.loadingText}>Chargement des signalisations...</ThemedText>
+              </View>
+            ) : (
+              <>
+                {activeTab === 'sent' ? (
+                  sentSignalizations.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                      <Ionicons name="send-outline" size={80} color="#ccc" />
+                      <ThemedText style={styles.emptyTitle}>Aucune signalisation envoyée</ThemedText>
+                      <ThemedText style={styles.emptySubtitle}>
+                        Scannez un QR code pour signaler un problème
+                      </ThemedText>
+                    </View>
+                  ) : (
+                    sentSignalizations.map((signalization) => (
+                      <View key={signalization.id} style={styles.signalizationCard}>
+                        <View style={styles.signalizationHeader}>
+                          <View style={styles.signalizationIcon}>
+                            <Ionicons name="car" size={20} color="white" />
+                          </View>
+                          <View style={styles.signalizationInfo}>
+                            <ThemedText style={styles.signalizationTitle}>
+                              {signalization.vehicle_brand} {signalization.vehicle_model}
+                            </ThemedText>
+                            <ThemedText style={styles.signalizationSubtitle}>
+                              {signalization.vehicle_license_plate}
+                            </ThemedText>
+                          </View>
+                          <View style={[styles.urgencyBadge, { backgroundColor: 
+                            signalization.urgency_level === 'urgent' ? '#EF4444' :
+                            signalization.urgency_level === 'important' ? '#F59E0B' : '#10B981'
+                          }]}>
+                            <ThemedText style={styles.urgencyText}>
+                              {signalization.urgency_level === 'urgent' ? 'Urgent' :
+                               signalization.urgency_level === 'important' ? 'Important' : 'Normal'}
+                            </ThemedText>
+                          </View>
+                        </View>
+                        <ThemedText style={styles.signalizationReason}>
+                          {signalization.reason_type === 'stationnement_genant' ? 'Stationnement gênant' :
+                           signalization.reason_type === 'probleme_technique' ? 'Problème technique' :
+                           signalization.reason_type === 'accident' ? 'Accident' :
+                           signalization.reason_type === 'vehicule_abandonne' ? 'Véhicule abandonné' : 'Autre'}
+                        </ThemedText>
+                        {signalization.custom_message && (
+                          <ThemedText style={styles.signalizationMessage}>
+                            {signalization.custom_message}
+                          </ThemedText>
+                        )}
+                        <ThemedText style={styles.signalizationDate}>
+                          {new Date(signalization.created_at).toLocaleDateString('fr-FR')}
+                        </ThemedText>
+                      </View>
+                    ))
+                  )
+                ) : (
+                  receivedSignalizations.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                      <Ionicons name="notifications-outline" size={80} color="#ccc" />
+                      <ThemedText style={styles.emptyTitle}>Aucune signalisation reçue</ThemedText>
+                      <ThemedText style={styles.emptySubtitle}>
+                        Les signalisations concernant vos véhicules apparaîtront ici
+                      </ThemedText>
+                    </View>
+                  ) : (
+                    receivedSignalizations.map((signalization) => (
+                      <View key={signalization.id} style={styles.signalizationCard}>
+                        <View style={styles.signalizationHeader}>
+                          <View style={styles.signalizationIcon}>
+                            <Ionicons name="car" size={20} color="white" />
+                          </View>
+                          <View style={styles.signalizationInfo}>
+                            <ThemedText style={styles.signalizationTitle}>
+                              {signalization.vehicle_brand} {signalization.vehicle_model}
+                            </ThemedText>
+                            <ThemedText style={styles.signalizationSubtitle}>
+                              {signalization.vehicle_license_plate}
+                            </ThemedText>
+                          </View>
+                          <View style={[styles.urgencyBadge, { backgroundColor: 
+                            signalization.urgency_level === 'urgent' ? '#EF4444' :
+                            signalization.urgency_level === 'important' ? '#F59E0B' : '#10B981'
+                          }]}>
+                            <ThemedText style={styles.urgencyText}>
+                              {signalization.urgency_level === 'urgent' ? 'Urgent' :
+                               signalization.urgency_level === 'important' ? 'Important' : 'Normal'}
+                            </ThemedText>
+                          </View>
+                        </View>
+                        <ThemedText style={styles.signalizationReason}>
+                          {signalization.reason_type === 'stationnement_genant' ? 'Stationnement gênant' :
+                           signalization.reason_type === 'probleme_technique' ? 'Problème technique' :
+                           signalization.reason_type === 'accident' ? 'Accident' :
+                           signalization.reason_type === 'vehicule_abandonne' ? 'Véhicule abandonné' : 'Autre'}
+                        </ThemedText>
+                        {signalization.custom_message && (
+                          <ThemedText style={styles.signalizationMessage}>
+                            {signalization.custom_message}
+                          </ThemedText>
+                        )}
+                        <ThemedText style={styles.signalizationDate}>
+                          {new Date(signalization.created_at).toLocaleDateString('fr-FR')}
+                        </ThemedText>
+                      </View>
+                    ))
+                  )
+                )}
+              </>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -511,6 +615,8 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   mainActionContainer: {
+    position: 'relative',
+    top: 20,
     paddingHorizontal: 24,
     marginTop: -20,
     marginBottom: 32,
@@ -566,6 +672,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   quickActionsContainer: {
+    position: 'relative',
+    top: 35,
     paddingHorizontal: 24,
     marginBottom: 32,
   },
@@ -640,6 +748,8 @@ const styles = StyleSheet.create({
     // Arrow positioning handled by flexDirection in header
   },
   statsContainer: {
+    position: 'relative',
+    top: 35,
     paddingHorizontal: 24,
     marginBottom: 32,
   },
@@ -757,42 +867,154 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
   },
-  featuresContainer: {
-    padding: 24,
+  // Styles pour le modal des notifications
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
   },
-  featuresGrid: {
+  modalHeader: {
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  modalHeaderContent: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
-  featureCard: {
-    width: (width - 60) / 2,
+  modalCloseButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: 'white',
+  },
+  modalPlaceholder: {
+    width: 40,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 25,
+    padding: 4,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  activeTabButton: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.8)',
+  },
+  activeTabText: {
+    color: 'white',
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  signalizationCard: {
+    backgroundColor: 'white',
     borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
-  featureGradient: {
-    padding: 20,
-    borderRadius: 16,
+  signalizationHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 120,
-    justifyContent: 'center',
+    marginBottom: 12,
   },
-  featureTitle: {
+  signalizationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#2633E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  signalizationInfo: {
+    flex: 1,
+  },
+  signalizationTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  signalizationSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  urgencyBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  urgencyText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'white',
+  },
+  signalizationReason: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
-    marginTop: 12,
-    marginBottom: 4,
-    textAlign: 'center',
+    marginBottom: 8,
   },
-  featureDescription: {
-    fontSize: 12,
+  signalizationMessage: {
+    fontSize: 14,
     color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  signalizationDate: {
+    fontSize: 12,
+    color: '#9CA3AF',
   },
 });

@@ -18,6 +18,8 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<null | 'fullName' | 'email' | 'password' | 'confirmPassword'>(null);
+  const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string; fullName?: string }>({});
 
   const { signIn, signUp } = useAuth();
   const primaryColor = useThemeColor({}, 'primary');
@@ -59,13 +61,28 @@ export default function AuthScreen() {
   }, [fadeAnim, slideAnim, logoScaleAnim, formSlideAnim]);
 
   const handleAuth = async () => {
-    if (!email || !password) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
-      return;
+    const nextErrors: typeof errors = {};
+
+    // validations simples
+    if (!email.trim()) {
+      nextErrors.email = "L'email est requis";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      nextErrors.email = 'Email invalide';
     }
 
-    if (!isLogin && (!fullName || password !== confirmPassword)) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs et vérifier que les mots de passe correspondent');
+    if (!password.trim()) {
+      nextErrors.password = 'Mot de passe requis';
+    } else if (password.length < 6) {
+      nextErrors.password = '6 caractères minimum';
+    }
+
+    if (!isLogin) {
+      if (!fullName.trim()) nextErrors.fullName = 'Nom requis';
+      if (confirmPassword !== password) nextErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
+    }
+
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
@@ -77,7 +94,6 @@ export default function AuthScreen() {
         router.replace('/(tabs)');
       } else {
         await signUp(email, password, fullName);
-        // Redirection vers l'onboarding après inscription
         router.replace('/onboarding');
       }
     } catch (error: any) {
@@ -92,13 +108,14 @@ export default function AuthScreen() {
     setPassword('');
     setConfirmPassword('');
     setFullName('');
+    setErrors({});
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
-      
-      {/* Background avec gradient violet moderne */}
+
+      {/* Background avec gradient */}
       <LinearGradient
         colors={['#2633E1', '#1E9B7E', '#26C29E', '#7DDAC5']}
         style={styles.backgroundGradient}
@@ -115,7 +132,7 @@ export default function AuthScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Logo et titre */}
+          {/* En-tête épuré */}
           <Animated.View
             style={[
               styles.logoSection,
@@ -128,22 +145,31 @@ export default function AuthScreen() {
               }
             ]}
           >
-            <View style={styles.logoContainer}>
-              <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC']}
-                style={styles.logoGradient}
-              >
-                <Ionicons name="car-sport" size={48} color="#2633E1" />
-              </LinearGradient>
-            </View>
-            
             <ThemedText style={styles.appTitle}>Notifcar</ThemedText>
             <ThemedText style={styles.appSubtitle}>
-              Votre sécurité automobile en un clic
+              {isLogin ? 'Connexion sécurisée' : 'Créer un compte'}
             </ThemedText>
           </Animated.View>
 
-          {/* Formulaire d'authentification */}
+          {/* Segmented toggle login / signup */}
+          <View style={styles.segmentedContainer}>
+            <TouchableOpacity
+              style={[styles.segmentButton, isLogin ? styles.segmentActive : undefined]}
+              onPress={() => !isLogin && toggleAuthMode()}
+              activeOpacity={0.8}
+            >
+              <ThemedText style={[styles.segmentText, isLogin ? styles.segmentTextActive : undefined]}>Connexion</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.segmentButton, !isLogin ? styles.segmentActive : undefined]}
+              onPress={() => isLogin && toggleAuthMode()}
+              activeOpacity={0.8}
+            >
+              <ThemedText style={[styles.segmentText, !isLogin ? styles.segmentTextActive : undefined]}>Inscription</ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          {/* Formulaire */}
           <Animated.View
             style={[
               styles.formContainer,
@@ -158,34 +184,29 @@ export default function AuthScreen() {
                 colors={['#FFFFFF', '#F8FAFC']}
                 style={styles.formGradient}
               >
-                <View style={styles.formHeader}>
-                  <ThemedText style={styles.formTitle}>
-                    {isLogin ? 'Connexion' : 'Inscription'}
-                  </ThemedText>
-                  <ThemedText style={styles.formSubtitle}>
-                    {isLogin 
-                      ? 'Connectez-vous à votre compte' 
-                      : 'Créez votre compte Notifcar'
-                    }
-                  </ThemedText>
-                </View>
-
                 <View style={styles.inputContainer}>
-                  {/* Nom complet (inscription seulement) */}
+                  {/* Nom complet */}
                   {!isLogin && (
                     <View style={styles.inputWrapper}>
                       <View style={styles.inputIcon}>
                         <Ionicons name="person" size={20} color={primaryColor} />
                       </View>
                       <TextInput
-                        style={styles.input}
+                        style={[
+                          styles.input,
+                          focusedField === 'fullName' ? styles.inputFocused : undefined,
+                          errors.fullName ? styles.inputError : undefined,
+                        ]}
                         placeholder="Nom complet"
                         placeholderTextColor="#9CA3AF"
                         value={fullName}
                         onChangeText={setFullName}
                         autoCapitalize="words"
                         autoCorrect={false}
+                        onFocus={() => setFocusedField('fullName')}
+                        onBlur={() => setFocusedField(null)}
                       />
+                      {errors.fullName ? <ThemedText style={styles.errorText}>{errors.fullName}</ThemedText> : null}
                     </View>
                   )}
 
@@ -195,7 +216,11 @@ export default function AuthScreen() {
                       <Ionicons name="mail" size={20} color={primaryColor} />
                     </View>
                     <TextInput
-                      style={styles.input}
+                      style={[
+                        styles.input,
+                        focusedField === 'email' ? styles.inputFocused : undefined,
+                        errors.email ? styles.inputError : undefined,
+                      ]}
                       placeholder="Adresse email"
                       placeholderTextColor="#9CA3AF"
                       value={email}
@@ -203,7 +228,10 @@ export default function AuthScreen() {
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
+                      onFocus={() => setFocusedField('email')}
+                      onBlur={() => setFocusedField(null)}
                     />
+                    {errors.email ? <ThemedText style={styles.errorText}>{errors.email}</ThemedText> : null}
                   </View>
 
                   {/* Mot de passe */}
@@ -212,60 +240,75 @@ export default function AuthScreen() {
                       <Ionicons name="lock-closed" size={20} color={primaryColor} />
                     </View>
                     <TextInput
-                      style={styles.input}
+                      style={[
+                        styles.input,
+                        focusedField === 'password' ? styles.inputFocused : undefined,
+                        errors.password ? styles.inputError : undefined,
+                      ]}
                       placeholder="Mot de passe"
                       placeholderTextColor="#9CA3AF"
                       value={password}
                       onChangeText={setPassword}
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
+                      onFocus={() => setFocusedField('password')}
+                      onBlur={() => setFocusedField(null)}
                     />
                     <TouchableOpacity
                       style={styles.passwordToggle}
                       onPress={() => setShowPassword(!showPassword)}
                     >
                       <Ionicons
-                        name={showPassword ? "eye-off" : "eye"}
+                        name={showPassword ? 'eye-off' : 'eye'}
                         size={20}
                         color="#9CA3AF"
                       />
                     </TouchableOpacity>
+                    {errors.password ? <ThemedText style={styles.errorText}>{errors.password}</ThemedText> : null}
                   </View>
 
-                  {/* Confirmation mot de passe (inscription seulement) */}
+                  {/* Confirmation */}
                   {!isLogin && (
                     <View style={styles.inputWrapper}>
                       <View style={styles.inputIcon}>
                         <Ionicons name="lock-closed" size={20} color={primaryColor} />
                       </View>
                       <TextInput
-                        style={styles.input}
+                        style={[
+                          styles.input,
+                          focusedField === 'confirmPassword' ? styles.inputFocused : undefined,
+                          errors.confirmPassword ? styles.inputError : undefined,
+                        ]}
                         placeholder="Confirmer le mot de passe"
                         placeholderTextColor="#9CA3AF"
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
                         secureTextEntry={!showConfirmPassword}
                         autoCapitalize="none"
+                        onFocus={() => setFocusedField('confirmPassword')}
+                        onBlur={() => setFocusedField(null)}
                       />
                       <TouchableOpacity
                         style={styles.passwordToggle}
                         onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                       >
                         <Ionicons
-                          name={showConfirmPassword ? "eye-off" : "eye"}
+                          name={showConfirmPassword ? 'eye-off' : 'eye'}
                           size={20}
                           color="#9CA3AF"
                         />
                       </TouchableOpacity>
+                      {errors.confirmPassword ? <ThemedText style={styles.errorText}>{errors.confirmPassword}</ThemedText> : null}
                     </View>
                   )}
                 </View>
 
-                {/* Bouton d'authentification */}
+                {/* Bouton principal */}
                 <TouchableOpacity
                   style={styles.authButton}
                   onPress={handleAuth}
                   disabled={loading}
+                  activeOpacity={0.85}
                 >
                   <LinearGradient
                     colors={['#2633E1', '#2633E1']}
@@ -281,7 +324,7 @@ export default function AuthScreen() {
                     ) : (
                       <>
                         <Ionicons 
-                          name={isLogin ? "log-in" : "person-add"} 
+                          name={isLogin ? 'log-in' : 'person-add'} 
                           size={20} 
                           color="white" 
                         />
@@ -293,7 +336,7 @@ export default function AuthScreen() {
                   </LinearGradient>
                 </TouchableOpacity>
 
-                {/* Lien pour changer de mode */}
+                {/* Lien toggle */}
                 <TouchableOpacity
                   style={styles.toggleButton}
                   onPress={toggleAuthMode}
@@ -305,29 +348,6 @@ export default function AuthScreen() {
                     }
                   </ThemedText>
                 </TouchableOpacity>
-              </LinearGradient>
-            </View>
-          </Animated.View>
-
-          {/* Informations supplémentaires */}
-          <Animated.View
-            style={[
-              styles.infoSection,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }]
-              }
-            ]}
-          >
-            <View style={styles.infoCard}>
-              <LinearGradient
-                colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-                style={styles.infoGradient}
-              >
-                <Ionicons name="shield-checkmark" size={24} color="white" />
-                <ThemedText style={styles.infoText}>
-                  Vos données sont sécurisées et protégées
-                </ThemedText>
               </LinearGradient>
             </View>
           </Animated.View>
@@ -359,45 +379,55 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   logoSection: {
-    zIndex: -1,
     alignItems: 'center',
-    marginBottom: 48,
-  },
-  logoContainer: {
-    zIndex: -1,
-    marginBottom: 20,
-    marginTop: 20,
-  },
-  logoGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+    marginBottom: 32,
   },
   appTitle: {
-    fontSize: 32,
-    fontWeight: '700',
+    fontSize: 20,
+    position: 'relative',
+    top: 20,
+    fontWeight: '800',
     color: 'white',
-    zIndex: -1,
-    marginBottom: 0,
-    textShadowColor: 'rgba(0,0,0,0.3)',
+    letterSpacing: -0.5,
+    textTransform: 'uppercase',
+    textShadowColor: 'rgba(0,0,0,0.25)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
   appSubtitle: {
+    position: 'relative',
+    top: 20,
     fontSize: 16,
     color: 'rgba(255,255,255,0.9)',
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '600',
+    marginTop: 6,
+  },
+  segmentedContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 16,
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  segmentActive: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  segmentText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '700',
+  },
+  segmentTextActive: {
+    color: 'white',
   },
   formContainer: {
-    marginBottom: 30,
+    marginBottom: 12,
   },
   formCard: {
     borderRadius: 24,
@@ -408,29 +438,14 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   formGradient: {
-    padding: 32,
+    padding: 24,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  formHeader: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  formTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 8,
-  },
-  formSubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
   inputContainer: {
-    gap: 20,
-    marginBottom: 32,
+    gap: 16,
+    marginBottom: 24,
   },
   inputWrapper: {
     position: 'relative',
@@ -442,9 +457,9 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#E5E7EB',
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 16,
     paddingLeft: 52,
     paddingRight: 52,
@@ -456,6 +471,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  inputFocused: {
+    borderColor: '#2633E1',
+    shadowColor: '#2633E1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
+  errorText: {
+    position: 'absolute',
+    left: 16,
+    bottom: -20,
+    color: '#EF4444',
+    fontSize: 12,
+    fontWeight: '600',
   },
   passwordToggle: {
     position: 'absolute',
@@ -470,7 +505,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 8,
-    marginBottom: 24,
+    marginBottom: 12,
   },
   authButtonGradient: {
     flexDirection: 'row',
@@ -488,37 +523,14 @@ const styles = StyleSheet.create({
   authButtonText: {
     color: 'white',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   toggleButton: {
     alignItems: 'center',
   },
   toggleButtonText: {
-    fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  infoSection: {
-    alignItems: 'center',
-  },
-  infoCard: {
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  infoGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
-    gap: 12,
-  },
-  infoText: {
-    color: 'white',
     fontSize: 14,
-    fontWeight: '500',
+    color: '#6B7280',
+    fontWeight: '600',
   },
 });

@@ -1,5 +1,4 @@
 import { ThemedText } from '@/components/ThemedText';
-import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useRef, useState } from 'react';
@@ -33,12 +32,9 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
     notes: initialData?.notes || '',
   });
 
-  const [errors, setErrors] = useState<Partial<VehicleFormData>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof VehicleFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const primaryColor = useThemeColor({}, 'primary');
-  const gradientStart = useThemeColor({}, 'gradientStart');
-  const gradientEnd = useThemeColor({}, 'gradientEnd');
+  const [focusedField, setFocusedField] = useState<keyof VehicleFormData | 'notes' | null>(null);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -76,10 +72,10 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
       })
     );
     Animated.stagger(100, animations).start();
-  }, []);
+  }, [fadeAnim, slideAnim, cardAnimations]);
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<VehicleFormData> = {};
+    const newErrors: Partial<Record<keyof VehicleFormData, string>> = {};
 
     if (!formData.brand.trim()) {
       newErrors.brand = 'La marque est requise';
@@ -95,7 +91,8 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
       newErrors.licensePlate = 'Format de plaque invalide';
     }
 
-    if (formData.year < 1900 || formData.year > new Date().getFullYear() + 1 || isNaN(formData.year)) {
+    const yearNum = Number(formData.year);
+    if (yearNum < 1900 || yearNum > new Date().getFullYear() + 1 || Number.isNaN(yearNum)) {
       newErrors.year = 'Année invalide';
     }
 
@@ -118,7 +115,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
     }
   };
 
-  const updateField = (field: keyof VehicleFormData, value: string | number) => {
+  const updateField = <K extends keyof VehicleFormData>(field: K, value: VehicleFormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -166,7 +163,10 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 <ThemedText style={styles.inputLabel}>Nom du véhicule (optionnel)</ThemedText>
               </View>
               <TextInput
-                style={styles.modernInput}
+                style={[
+                  styles.modernInput,
+                  focusedField === 'name' ? styles.modernInputFocused : undefined,
+                ]}
                 value={formData.name || ''}
                 onChangeText={(value) => updateField('name', value)}
                 placeholder="Ex: Ma voiture principale"
@@ -174,6 +174,8 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 autoCorrect={false}
                 autoCapitalize="words"
                 returnKeyType="next"
+                onFocus={() => setFocusedField('name')}
+                onBlur={() => setFocusedField(null)}
               />
             </LinearGradient>
           </Animated.View>
@@ -209,7 +211,8 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 <TextInput
                   style={[
                     styles.modernInput,
-                    errors.brand && styles.inputError
+                    errors.brand ? styles.inputError : undefined,
+                    focusedField === 'brand' ? styles.modernInputFocused : undefined,
                   ]}
                   value={formData.brand}
                   onChangeText={(value) => updateField('brand', value)}
@@ -218,6 +221,8 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                   autoCorrect={false}
                   autoCapitalize="words"
                   returnKeyType="next"
+                  onFocus={() => setFocusedField('brand')}
+                  onBlur={() => setFocusedField(null)}
                 />
                 {errors.brand && (
                   <ThemedText style={styles.errorText}>{errors.brand}</ThemedText>
@@ -254,7 +259,8 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 <TextInput
                   style={[
                     styles.modernInput,
-                    errors.model && styles.inputError
+                    errors.model ? styles.inputError : undefined,
+                    focusedField === 'model' ? styles.modernInputFocused : undefined,
                   ]}
                   value={formData.model}
                   onChangeText={(value) => updateField('model', value)}
@@ -263,6 +269,8 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                   autoCorrect={false}
                   autoCapitalize="words"
                   returnKeyType="next"
+                  onFocus={() => setFocusedField('model')}
+                  onBlur={() => setFocusedField(null)}
                 />
                 {errors.model && (
                   <ThemedText style={styles.errorText}>{errors.model}</ThemedText>
@@ -302,18 +310,21 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 <TextInput
                   style={[
                     styles.modernInput,
-                    errors.year && styles.inputError
+                    errors.year ? styles.inputError : undefined,
+                    focusedField === 'year' ? styles.modernInputFocused : undefined,
                   ]}
                   value={formData.year.toString()}
                   onChangeText={(value) => {
-                    const yearValue = parseInt(value) || 0;
-                    updateField('year', yearValue);
+                    const yearValue = parseInt(value, 10);
+                    updateField('year', Number.isNaN(yearValue) ? 0 : yearValue);
                   }}
                   placeholder="2024"
                   placeholderTextColor="#9CA3AF"
                   keyboardType="numeric"
                   autoCorrect={false}
                   returnKeyType="next"
+                  onFocus={() => setFocusedField('year')}
+                  onBlur={() => setFocusedField(null)}
                 />
                 {errors.year && (
                   <ThemedText style={styles.errorText}>{errors.year}</ThemedText>
@@ -350,7 +361,8 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 <TextInput
                   style={[
                     styles.modernInput,
-                    errors.licensePlate && styles.inputError
+                    errors.licensePlate ? styles.inputError : undefined,
+                    focusedField === 'licensePlate' ? styles.modernInputFocused : undefined,
                   ]}
                   value={formData.licensePlate}
                   onChangeText={(value) => updateField('licensePlate', value)}
@@ -359,6 +371,8 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                   autoCorrect={false}
                   autoCapitalize="characters"
                   returnKeyType="next"
+                  onFocus={() => setFocusedField('licensePlate')}
+                  onBlur={() => setFocusedField(null)}
                 />
                 {errors.licensePlate && (
                   <ThemedText style={styles.errorText}>{errors.licensePlate}</ThemedText>
@@ -393,7 +407,10 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 <ThemedText style={styles.inputLabel}>Couleur</ThemedText>
               </View>
               <TextInput
-                style={styles.modernInput}
+                style={[
+                  styles.modernInput,
+                  focusedField === 'color' ? styles.modernInputFocused : undefined,
+                ]}
                 value={formData.color || ''}
                 onChangeText={(value) => updateField('color', value)}
                 placeholder="Ex: Bleu, Noir, Blanc..."
@@ -401,6 +418,8 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 autoCorrect={false}
                 autoCapitalize="words"
                 returnKeyType="next"
+                onFocus={() => setFocusedField('color')}
+                onBlur={() => setFocusedField(null)}
               />
             </LinearGradient>
           </Animated.View>
@@ -431,7 +450,7 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 <ThemedText style={styles.inputLabel}>Notes</ThemedText>
               </View>
               <TextInput
-                style={[styles.modernInput, styles.textArea]}
+                style={[styles.modernInput, styles.textArea, focusedField === 'notes' ? styles.modernInputFocused : undefined]}
                 value={formData.notes || ''}
                 onChangeText={(value) => updateField('notes', value)}
                 placeholder="Informations supplémentaires..."
@@ -441,6 +460,8 @@ export function PerfectVehicleForm({ onSubmit, onCancel, initialData, title = "A
                 textAlignVertical="top"
                 autoCorrect={false}
                 returnKeyType="done"
+                onFocus={() => setFocusedField('notes')}
+                onBlur={() => setFocusedField(null)}
               />
             </LinearGradient>
           </Animated.View>
@@ -757,6 +778,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  modernInputFocused: {
+    borderColor: '#2633E1',
+    shadowColor: '#2633E1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   rowContainer: {
     flexDirection: 'row',
