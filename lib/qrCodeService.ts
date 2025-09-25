@@ -96,8 +96,13 @@ export class QRCodeService {
                 <div class="qr-image">
                   <img src="${qrCodeUrl}" alt="QR Code" />
                 </div>
+                <div style="margin: 8px 0 10px 0; color:#64748B; font-size:12px;">Scannez pour contacter le propriétaire</div>
                 <div class="badge">CHAÎNE</div>
                 <div class="qr-text">${qrString}</div>
+              </div>
+              <div style="display:flex; gap:10px; justify-content:center; margin-top:6px;">
+                <div style="background:#EEF2FF; color:#2633E1; padding:8px 12px; border-radius:10px; font-weight:700; font-size:11px;">notifcar</div>
+                <div style="background:#ECFDF5; color:#065F46; padding:8px 12px; border-radius:10px; font-weight:700; font-size:11px;">sécurisé</div>
               </div>
             </div>
             <div class="footer">

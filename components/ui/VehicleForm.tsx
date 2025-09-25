@@ -274,13 +274,7 @@ export function VehicleForm({ onSubmit, onCancel, initialData, title = "Ajouter 
             size="medium"
             style={styles.actionButton}
           />
-          <VioletButton
-            title="Enregistrer"
-            onPress={handleSubmit}
-            variant="primary"
-            size="medium"
-            style={styles.actionButton}
-          />
+        
         </View>
       </VioletCard>
     </KeyboardAvoidingView>
@@ -311,6 +305,7 @@ const styles = StyleSheet.create({
   },
   form: {
     maxHeight: 400,
+    paddingBottom: 20,
   },
   inputGroup: {
     marginBottom: 20,

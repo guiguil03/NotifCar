@@ -1,24 +1,26 @@
 import { ThemedText } from '@/components/ThemedText';
 import { useAuth } from '@/contexts/AuthContext';
-import { useThemeColor } from '@/hooks/useThemeColor';
+// import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const insets = useSafeAreaInsets();
   
-  const primaryColor = useThemeColor({}, 'primary');
-  const secondaryColor = useThemeColor({}, 'secondary');
-  const successColor = useThemeColor({}, 'success');
-  const gradientStart = useThemeColor({}, 'gradientStart');
-  const gradientEnd = useThemeColor({}, 'gradientEnd');
-  const gradientLight = useThemeColor({}, 'gradientLight');
+  // const primaryColor = useThemeColor({}, 'primary');
+  // const secondaryColor = useThemeColor({}, 'secondary');
+  // const successColor = useThemeColor({}, 'success');
+  // const gradientStart = useThemeColor({}, 'gradientStart');
+  // const gradientEnd = useThemeColor({}, 'gradientEnd');
+  // const gradientLight = useThemeColor({}, 'gradientLight');
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -110,9 +112,9 @@ export default function HomeScreen() {
     router.push('/(tabs)/notifications');
   };
 
-  const handleProfile = () => {
-    router.push('/(tabs)/explore');
-  };
+  // const handleProfile = () => {
+  //   router.push('/(tabs)/explore');
+  // };
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
@@ -121,21 +123,21 @@ export default function HomeScreen() {
     return 'Bonsoir';
   };
 
-  const getTimeString = () => {
-    return currentTime.toLocaleTimeString('fr-FR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
+  // const getTimeString = () => {
+  //   return currentTime.toLocaleTimeString('fr-FR', { 
+  //     hour: '2-digit', 
+  //     minute: '2-digit' 
+  //   });
+  // };
 
-  const getDateString = () => {
-    return currentTime.toLocaleDateString('fr-FR', { 
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  // const getDateString = () => {
+  //   return currentTime.toLocaleDateString('fr-FR', { 
+  //     weekday: 'long',
+  //     year: 'numeric',
+  //     month: 'long',
+  //     day: 'numeric'
+  //   });
+  // };
 
   return (
     <View style={styles.container}>
@@ -145,7 +147,7 @@ export default function HomeScreen() {
       <LinearGradient
         colors={['#2633E1', '#1E9B7E', '#1E9B7E', '#26C29E', '#7DDAC5']}
         locations={[0, 0.6, 0.7, 0.9, 1]}
-        style={styles.headerGradient}
+        style={[styles.headerGradient, { paddingTop: insets.top + 16 }]}
         start={{ x: 0, y: 1 }}
         end={{ x: 1, y: 0 }}
       >
@@ -464,7 +466,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoContainer: {
-    marginBottom: 0,
+    marginBottom: 10,
   },
   logoGradient: {
     width: 64,
@@ -479,13 +481,12 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   welcomeSection: {
-    zIndex: 1,
-    top: 16,
     alignItems: 'center',
     paddingTop: 10,
     paddingBottom: 12,
   },
   greetingText: {
+    top: 10,
     fontSize: 30,
     fontWeight: '800',
     color: 'white',
@@ -502,6 +503,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: '600',
   },
+
   scrollContainer: {
     flex: 1,
   },
@@ -730,7 +732,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
   },
   profileButton: {
     borderRadius: 12,

@@ -108,16 +108,22 @@ export function QRCodeGenerator({ vehicleData, qrCodeFromDB, onQRGenerated }: QR
   };
 
   const captureAndShare = async () => {
-    if (!qrString) return;
+    if (!qrString || !vehicleId) return;
 
     setIsCapturing(true);
     try {
-      // Générer une image via PrintService puis partager
-      const imageUri = await PrintService.generateQRCodeImage(qrString, vehicleData.vehicleName);
-      await Share.share({ url: imageUri, message: qrString });
+      await PrintService.shareQRCodePDF({
+        id: vehicleId,
+        vehicleId: vehicleId,
+        vehicleName: vehicleData.vehicleName,
+        ownerId: vehicleData.ownerId,
+        qrString: qrString,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible de partager le QR code');
-      console.error('Erreur partage QR:', error);
+      Alert.alert('Erreur', 'Impossible de partager le PDF');
+      console.error('Erreur partage PDF:', error);
     } finally {
       setIsCapturing(false);
     }
