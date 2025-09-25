@@ -3,14 +3,13 @@ import { QRCodeDisplay } from '@/components/ui/QRCodeDisplay';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { CloudStorageService, QRCodeData } from '@/lib/cloudStorageService';
 import { PrintService } from '@/lib/printService';
-import { QRCaptureService } from '@/lib/qrCaptureService';
 import { QRCodeService, VehicleQRData } from '@/lib/qrCodeService';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Share, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface QRCodeGeneratorProps {
-  vehicleData: Omit<VehicleQRData, 'vehicleId' | 'createdAt'>;
+  vehicleData: VehicleQRData; // On exige maintenant l'ID véhicule pour garantir l'idempotence
   qrCodeFromDB?: string; // QR code stocké en base de données
   onQRGenerated?: (qrData: VehicleQRData) => void;
 }
@@ -40,29 +39,25 @@ export function QRCodeGenerator({ vehicleData, qrCodeFromDB, onQRGenerated }: QR
     try {
       // PRIORITÉ 1: Utiliser le QR code de la base de données s'il est fourni et valide
       if (qrCodeFromDB && qrCodeFromDB.startsWith('notifcar:')) {
-        console.log('[QRCodeGenerator] Utilisation QR code de la base:', qrCodeFromDB);
         setQrString(qrCodeFromDB);
-        // Extraire l'ID du véhicule du QR code
         const parts = qrCodeFromDB.split(':');
         setVehicleId(parts[1] || 'unknown');
-      } 
-      // PRIORITÉ 2: Utiliser l'ID du véhicule existant pour générer le bon QR code
-      else if (vehicleData && vehicleData.vehicleId) {
-        console.log('[QRCodeGenerator] Génération avec ID existant:', vehicleData.vehicleId);
+        return;
+      }
+      // PRIORITÉ 2: Composer strictement à partir des IDs existants (aucune génération aléatoire ici)
+      if (vehicleData?.vehicleId && vehicleData?.ownerId) {
         const correctQRString = `notifcar:${vehicleData.vehicleId}:${vehicleData.ownerId}`;
         setQrString(correctQRString);
         setVehicleId(vehicleData.vehicleId);
-      } 
-      // PRIORITÉ 3: Générer un nouveau QR code (seulement pour nouveaux véhicules)
-      else if (vehicleData) {
-        console.log('[QRCodeGenerator] Génération nouveau QR code');
-        const result = QRCodeService.generateVehicleQRCode(vehicleData);
-        setQrString(result.qrString);
-        setVehicleId(result.vehicleId);
+        return;
       }
+      // Sinon, on ne sait pas construire un QR déterministe
+      Alert.alert('QR code indisponible', "Impossible de déterminer l'ID du véhicule. Veuillez réessayer.");
+      setQrString(null);
     } catch (error) {
       Alert.alert('Erreur', 'Impossible de générer le QR code');
       console.error('Erreur génération QR:', error);
+      setQrString(null);
     } finally {
       setIsGenerating(false);
     }
@@ -113,114 +108,27 @@ export function QRCodeGenerator({ vehicleData, qrCodeFromDB, onQRGenerated }: QR
   };
 
   const captureAndShare = async () => {
-    if (!qrCodeRef.current || !qrString) return;
-
-    setIsCapturing(true);
-    try {
-      // Capturer le QR code en image
-      const imageUri = await QRCaptureService.captureQRCode(qrCodeRef, {
-        format: 'png',
-        quality: 1,
-        result: 'tmpfile'
-      });
-
-      // Partager l'image
-      await QRCaptureService.shareQRCode(imageUri, vehicleData.vehicleName, {
-        format: 'png',
-        quality: 1
-      });
-
-    } catch (error) {
-      Alert.alert('Erreur', 'Impossible de capturer et partager le QR code');
-      console.error('Erreur capture/partage:', error);
-    } finally {
-      setIsCapturing(false);
-    }
-  };
-
-  const captureAndSave = async () => {
-    if (!qrCodeRef.current || !qrString) return;
-
-    setIsCapturing(true);
-    try {
-      // Capturer le QR code en image
-      const imageUri = await QRCaptureService.captureQRCode(qrCodeRef, {
-        format: 'png',
-        quality: 1,
-        result: 'tmpfile'
-      });
-
-      // Sauvegarder dans les documents
-      const savedPath = await QRCaptureService.saveQRCodeToDocuments(
-        imageUri, 
-        vehicleData.vehicleName, 
-        'png'
-      );
-
-      Alert.alert(
-        'Succès',
-        `QR code sauvegardé dans les documents : ${savedPath}`,
-        [{ text: 'OK' }]
-      );
-
-    } catch (error) {
-      Alert.alert('Erreur', 'Impossible de capturer et sauvegarder le QR code');
-      console.error('Erreur capture/sauvegarde:', error);
-    } finally {
-      setIsCapturing(false);
-    }
-  };
-
-  const downloadQRCode = async () => {
     if (!qrString) return;
 
-    setIsDownloading(true);
+    setIsCapturing(true);
     try {
-      // Sauvegarder le QR code string localement
-      const filePath = await QRCodeService.saveQRCodeToDevice(qrString, vehicleData.vehicleName);
-
-      Alert.alert(
-        'Succès',
-        'QR code sauvegardé localement ! Vous pouvez maintenant l\'imprimer et le coller sur le pare-brise.',
-        [
-          { text: 'OK' },
-          { text: 'Partager', onPress: () => shareQRCode(filePath) }
-        ]
-      );
+      // Générer une image via PrintService puis partager
+      const imageUri = await PrintService.generateQRCodeImage(qrString, vehicleData.vehicleName);
+      await Share.share({ url: imageUri, message: qrString });
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible de sauvegarder le QR code');
-      console.error('Erreur sauvegarde:', error);
+      Alert.alert('Erreur', 'Impossible de partager le QR code');
+      console.error('Erreur partage QR:', error);
     } finally {
-      setIsDownloading(false);
+      setIsCapturing(false);
     }
   };
 
-  const shareQRCode = async (fileUri?: string) => {
-    try {
-      if (fileUri) {
-        await Share.share({
-          url: fileUri,
-          title: `QR Code NotifCar - ${vehicleData.vehicleName}`,
-          message: `QR Code pour le véhicule ${vehicleData.vehicleName}. Collez-le sur le pare-brise.\n\nCode: ${qrString}`,
-        });
-      } else {
-        await Share.share({
-          message: `QR Code NotifCar - ${vehicleData.vehicleName}\nCode: ${qrString}\n\nCollez ce QR code sur le pare-brise de votre véhicule.`,
-          title: 'QR Code NotifCar',
-        });
-      }
-    } catch (error) {
-      console.error('Erreur partage:', error);
-    }
-  };
-
-  const printQRCode = async () => {
+  const printToPdf = async () => {
     if (!qrString || !vehicleId) return;
 
+    setIsPrinting(true);
     try {
-      setIsPrinting(true);
-      
-      const qrData: QRCodeData = {
+      await PrintService.shareQRCodePDF({
         id: vehicleId,
         vehicleId: vehicleId,
         vehicleName: vehicleData.vehicleName,
@@ -228,31 +136,25 @@ export function QRCodeGenerator({ vehicleData, qrCodeFromDB, onQRGenerated }: QR
         qrString: qrString,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      };
-
-      await PrintService.shareQRCodePDF(qrData);
+      });
     } catch (error) {
-      console.error('Erreur impression:', error);
-      Alert.alert('Erreur', 'Impossible d\'imprimer le QR code');
+      Alert.alert('Erreur', 'Impossible de générer ou partager le PDF');
+      console.error('Erreur impression QR:', error);
     } finally {
       setIsPrinting(false);
     }
   };
 
-  if (isGenerating) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <View style={styles.loadingIcon}>
-            <Ionicons name="qr-code" size={32} color="#2633E1" />
-          </View>
-          <ThemedText style={styles.loadingText}>
-            Génération du QR code...
-          </ThemedText>
-        </View>
-      </View>
-    );
-  }
+  const shareHtmlDocument = async () => {
+    if (!qrString) return;
+    try {
+      const htmlPath = await QRCodeService.saveQRCodeToDevice(qrString, vehicleData.vehicleName);
+      await Share.share({ url: htmlPath, message: qrString });
+    } catch (error) {
+      Alert.alert('Erreur', "Impossible de partager le document");
+      console.error('Erreur partage document:', error);
+    }
+  };
 
   if (!qrString) {
     return (
@@ -305,76 +207,23 @@ export function QRCodeGenerator({ vehicleData, qrCodeFromDB, onQRGenerated }: QR
         </View>
       </View>
 
-      {/* Instructions */}
-      <View style={styles.instructions}>
-        <ThemedText style={styles.instructionsTitle}>Instructions :</ThemedText>
-        <View style={styles.instructionList}>
-          <View style={styles.instructionItem}>
-            <View style={styles.instructionIcon}>
-              <Ionicons name="print" size={16} color="#6B7280" />
-            </View>
-            <ThemedText style={styles.instructionText}>
-              Imprimez ce QR code
-            </ThemedText>
-          </View>
-          <View style={styles.instructionItem}>
-            <View style={styles.instructionIcon}>
-              <Ionicons name="cut" size={16} color="#6B7280" />
-            </View>
-            <ThemedText style={styles.instructionText}>
-              Découpez-le aux dimensions
-            </ThemedText>
-          </View>
-          <View style={styles.instructionItem}>
-            <View style={styles.instructionIcon}>
-              <Ionicons name="car" size={16} color="#6B7280" />
-            </View>
-            <ThemedText style={styles.instructionText}>
-              Collez-le sur le pare-brise
-            </ThemedText>
-          </View>
-        </View>
-      </View>
-
-      {/* Actions principales - 3 boutons en ligne */}
-      <View style={styles.mainActionsContainer}>
-        <TouchableOpacity
-          style={[styles.mainActionButton, styles.violetButton]}
-          onPress={printQRCode}
-          disabled={isPrinting}
-        >
-          <View style={styles.buttonIconContainer}>
-            <Ionicons name="share" size={20} color="white" />
-          </View>
-          <ThemedText style={styles.mainButtonText}>
-            {isPrinting ? "Génération..." : "Partager"}
-          </ThemedText>
+      {/* Actions */}
+      <View style={styles.actions}>
+        <TouchableOpacity style={styles.actionButton} onPress={captureAndShare}>
+          <Ionicons name="share-social" size={18} color="#2633E1" />
+          <ThemedText style={styles.actionText}>Partager</ThemedText>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.mainActionButton, styles.violetButton]}
-          onPress={printQRCode}
-          disabled={isPrinting}
-        >
-          <View style={styles.buttonIconContainer}>
-            <Ionicons name="save" size={20} color="white" />
-          </View>
-          <ThemedText style={styles.mainButtonText}>
-            {isPrinting ? "Génération..." : "Sauvegarder"}
-          </ThemedText>
+        <TouchableOpacity style={styles.actionButton} onPress={printToPdf}>
+          <Ionicons name="print" size={18} color="#2633E1" />
+          <ThemedText style={styles.actionText}>Imprimer</ThemedText>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.mainActionButton, styles.violetButton]}
-          onPress={printQRCode}
-          disabled={isPrinting}
-        >
-          <View style={styles.buttonIconContainer}>
-            <Ionicons name="print" size={20} color="white" />
-          </View>
-          <ThemedText style={styles.mainButtonText}>
-            {isPrinting ? "Génération..." : "Imprimer"}
-          </ThemedText>
+        <TouchableOpacity style={styles.actionButton} onPress={saveToCloud}>
+          <Ionicons name="cloud-upload" size={18} color="#2633E1" />
+          <ThemedText style={styles.actionText}>Sauvegarder</ThemedText>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={shareHtmlDocument}>
+          <Ionicons name="document-text" size={18} color="#2633E1" />
+          <ThemedText style={styles.actionText}>Partager document</ThemedText>
         </TouchableOpacity>
       </View>
     </View>
@@ -383,196 +232,83 @@ export function QRCodeGenerator({ vehicleData, qrCodeFromDB, onQRGenerated }: QR
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'white',
-    margin: 16,
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    padding: 32,
-  },
-  loadingIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  loadingText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  errorContainer: {
-    alignItems: 'center',
-    padding: 32,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#EF4444',
-    marginBottom: 16,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  retryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  retryText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2633E1',
+    width: '100%',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    gap: 12,
+    marginBottom: 12,
   },
   headerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F3F4F6',
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    backgroundColor: '#EEF2FF',
   },
   headerText: {
     flex: 1,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
+    color: '#1F2937',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
-    lineHeight: 20,
   },
   qrSection: {
     alignItems: 'center',
-    marginBottom: 24,
   },
   qrWrapper: {
     backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   qrInfo: {
+    marginTop: 12,
     alignItems: 'center',
   },
   qrLabel: {
     fontSize: 12,
     color: '#6B7280',
-    fontWeight: '500',
-    marginBottom: 4,
+    fontWeight: '600',
   },
   qrCodeText: {
-    fontSize: 11,
+    marginTop: 6,
     fontFamily: 'monospace',
-    color: '#374151',
-    textAlign: 'center',
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  instructions: {
-    marginBottom: 24,
-  },
-  instructionsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 12,
     color: '#111827',
-    marginBottom: 12,
-  },
-  instructionList: {
-    gap: 8,
-  },
-  instructionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  instructionIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  instructionText: {
-    fontSize: 14,
-    color: '#374151',
-    flex: 1,
-  },
-  // Nouveaux styles pour les 3 boutons principaux
-  mainActionsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-    paddingHorizontal: 4,
-  },
-  mainActionButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  violetButton: {
-    backgroundColor: '#2633E1', // Couleur primaire du nouveau DA
-  },
-  buttonIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  mainButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: 'white',
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  actionText: {
+    color: '#2633E1',
+    fontWeight: '700',
   },
 });

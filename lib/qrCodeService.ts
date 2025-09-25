@@ -67,57 +67,42 @@ export class QRCodeService {
         <html>
         <head>
           <meta charset="utf-8">
+          <title>QR Code NotifCar - ${vehicleName}</title>
           <style>
-            body {
-              margin: 0;
-              padding: 20px;
-              background: white;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              font-family: Arial, sans-serif;
-            }
-            .container {
-              text-align: center;
-              max-width: 300px;
-            }
-            .vehicle-name {
-              font-size: 18px;
-              font-weight: bold;
-              color: #1F2937;
-              margin-bottom: 20px;
-            }
-            .qr-image {
-              width: 200px;
-              height: 200px;
-              margin: 20px auto;
-              border: 2px solid #E5E7EB;
-              border-radius: 10px;
-              background: white;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            }
-            .qr-text {
-              font-family: monospace;
-              font-size: 12px;
-              color: #6B7280;
-              background: #F9FAFB;
-              padding: 10px;
-              border-radius: 8px;
-              word-break: break-all;
-              margin-top: 15px;
-            }
+            body { margin: 0; padding: 28px; background: #F1F5F9; font-family: Inter, Arial, sans-serif; color: #0F172A; }
+            .sheet { max-width: 520px; margin: 0 auto; background: #fff; border-radius: 24px; box-shadow: 0 12px 30px rgba(15,23,42,0.12); border: 1px solid #E2E8F0; }
+            .header { padding: 26px 26px 18px 26px; border-bottom: 1px solid #EEF2FF; background: linear-gradient(180deg, rgba(38,51,225,0.06) 0%, rgba(38,51,225,0) 100%); border-top-left-radius: 24px; border-top-right-radius: 24px; text-align: center; }
+            .brand { font-size: 30px; font-weight: 900; color: #2633E1; letter-spacing: .2px; }
+            .vehicle-name { font-size: 22px; font-weight: 800; color: #0F172A; margin: 8px 0 4px 0; }
+            .subtitle { font-size: 14px; color: #475569; }
+            .body { padding: 26px; }
+            .qr-container { background: #F8FAFC; border-radius: 18px; padding: 22px; margin: 22px 0; border: 2px dashed #E2E8F0; text-align: center; }
+            .qr-image { width: 260px; height: 260px; margin: 0 auto 16px auto; border-radius: 16px; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 22px rgba(2,6,23,0.08); border: 1px solid #E2E8F0; }
+            .qr-image img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+            .badge { display: inline-block; padding: 8px 12px; border-radius: 999px; background: #EEF2FF; color: #2633E1; font-weight: 700; font-size: 11px; letter-spacing: 0.3px; }
+            .qr-text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: #0F172A; background: #ffffff; padding: 12px 14px; border-radius: 12px; border: 1px solid #E2E8F0; white-space: nowrap; overflow-x: auto; word-break: normal; }
+            .footer { margin: 18px 26px 26px 26px; padding-top: 14px; border-top: 1px solid #E2E8F0; color: #475569; font-size: 12px; text-align: center; }
           </style>
         </head>
         <body>
-          <div class="container">
-            <div class="vehicle-name">${vehicleName}</div>
-            <div class="qr-image">
-              <img src="${qrCodeUrl}" alt="QR Code" style="max-width: 100%; max-height: 100%;" />
+          <div class="sheet">
+            <div class="header">
+              <div class="brand">🚗 NotifCar</div>
+              <div class="vehicle-name">${vehicleName}</div>
+              <div class="subtitle">QR Code de sécurité</div>
             </div>
-            <div class="qr-text">${qrString}</div>
+            <div class="body">
+              <div class="qr-container">
+                <div class="qr-image">
+                  <img src="${qrCodeUrl}" alt="QR Code" />
+                </div>
+                <div class="badge">CHAÎNE</div>
+                <div class="qr-text">${qrString}</div>
+              </div>
+            </div>
+            <div class="footer">
+              Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}
+            </div>
           </div>
         </body>
         </html>

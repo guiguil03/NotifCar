@@ -18,81 +18,22 @@ export class PrintService {
         <meta charset="utf-8">
         <title>QR Code NotifCar - ${qrData.vehicleName}</title>
         <style>
-          body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #2633E1, #1E9B7E);
-            color: white;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-          }
-          .container {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-            text-align: center;
-            max-width: 400px;
-            width: 100%;
-          }
+          @font-face { font-family: Inter; src: local('Inter'), local('Arial'); }
+          body { font-family: Inter, Arial, sans-serif; margin: 0; padding: 28px; background: #F1F5F9; color: #0F172A; }
+          .sheet { max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 24px; box-shadow: 0 12px 30px rgba(15,23,42,0.12); border: 1px solid #E2E8F0; }
+          .header { padding: 26px 26px 18px 26px; border-bottom: 1px solid #EEF2FF; background: linear-gradient(180deg, rgba(38,51,225,0.06) 0%, rgba(38,51,225,0) 100%); border-top-left-radius: 24px; border-top-right-radius: 24px; text-align: center; }
+          .brand { font-size: 30px; font-weight: 900; color: #2633E1; letter-spacing: .2px; }
+          .vehicle-name { font-size: 22px; font-weight: 800; color: #0F172A; margin: 8px 0 4px 0; }
+          .subtitle { font-size: 14px; color: #475569; }
+          .body { padding: 26px; }
           .header {
-            margin-bottom: 30px;
+            margin-bottom: 0;
           }
-          .logo {
-            font-size: 32px;
-            font-weight: bold;
-            color: #2633E1;
-            margin-bottom: 10px;
-          }
-          .vehicle-name {
-            font-size: 24px;
-            font-weight: bold;
-            color: #1F2937;
-            margin-bottom: 5px;
-          }
-          .vehicle-details {
-            color: #6B7280;
-            font-size: 16px;
-          }
-          .qr-container {
-            background: #F9FAFB;
-            border-radius: 15px;
-            padding: 20px;
-            margin: 30px 0;
-            border: 2px dashed #E5E7EB;
-          }
-          .qr-image {
-            width: 250px;
-            height: 250px;
-            margin: 0 auto 20px auto;
-            border: 3px solid #E5E7EB;
-            border-radius: 15px;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-          }
-          .qr-image img {
-            max-width: 100%;
-            max-height: 100%;
-            border-radius: 10px;
-          }
-          .qr-code {
-            font-family: monospace;
-            font-size: 14px;
-            color: #1F2937;
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #E5E7EB;
-            word-break: break-all;
-            margin-top: 15px;
-          }
+          .qr-container { background: #F8FAFC; border-radius: 18px; padding: 22px; margin: 22px 0; border: 2px dashed #E2E8F0; }
+          .qr-image { width: 260px; height: 260px; margin: 0 auto 16px auto; border-radius: 16px; background: #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 22px rgba(2,6,23,0.08); border: 1px solid #E2E8F0; }
+          .qr-image img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+          .badge { display: inline-block; padding: 8px 12px; border-radius: 999px; background: #EEF2FF; color: #2633E1; font-weight: 700; font-size: 11px; letter-spacing: 0.3px; }
+          .qr-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: #0F172A; background: #ffffff; padding: 12px 14px; border-radius: 12px; border: 1px solid #E2E8F0; white-space: nowrap; overflow-x: auto; word-break: normal; }
           .instructions {
             margin-top: 30px;
             text-align: left;
@@ -100,7 +41,7 @@ export class PrintService {
           .instruction-title {
             font-size: 18px;
             font-weight: bold;
-            color: #1F2937;
+            color: #0F172A;
             margin-bottom: 15px;
           }
           .instruction-list {
@@ -111,7 +52,7 @@ export class PrintService {
             display: flex;
             align-items: center;
             margin-bottom: 10px;
-            color: #4B5563;
+            color: #334155;
           }
           .instruction-icon {
             width: 20px;
@@ -127,27 +68,29 @@ export class PrintService {
             font-weight: bold;
           }
           .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #E5E7EB;
-            color: #6B7280;
-            font-size: 14px;
+            margin: 18px 26px 26px 26px;
+            padding-top: 14px;
+            border-top: 1px solid #E2E8F0;
+            color: #475569;
+            font-size: 12px;
           }
         </style>
       </head>
       <body>
-        <div class="container">
+        <div class="sheet">
           <div class="header">
-            <div class="logo">🚗 NotifCar</div>
+            <div class="brand">🚗 NotifCar</div>
             <div class="vehicle-name">${qrData.vehicleName}</div>
-            <div class="vehicle-details">QR Code de sécurité</div>
+            <div class="subtitle">QR Code de sécurité</div>
           </div>
+          <div class="body">
           
           <div class="qr-container">
             <div class="qr-image">
               <img src="${qrCodeUrl}" alt="QR Code NotifCar" style="max-width: 100%; max-height: 100%;" 
                    onerror="this.parentNode.innerHTML='<div style=\'color: #DC2626; font-size: 14px;\'>Erreur de chargement du QR Code</div><div style=\'font-family: monospace; font-size: 12px; margin-top: 10px; word-break: break-all;\'>${qrData.qrString}</div>';" />
             </div>
+            <div class="badge">CHAÎNE</div>
             <div class="qr-code">${qrData.qrString}</div>
           </div>
           
@@ -245,6 +188,7 @@ export class PrintService {
    * Génère une image du QR code pour le partage
    */
   static async generateQRCodeImage(qrString: string, vehicleName: string): Promise<string> {
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrString)}&format=png&color=000000&bgcolor=FFFFFF&margin=15&ecc=M&qzone=2`;
     const html = `
       <!DOCTYPE html>
       <html>
@@ -269,19 +213,17 @@ export class PrintService {
             border: 2px solid #E5E7EB;
           }
           .qr-visual {
-            width: 200px;
-            height: 200px;
-            background: #1F2937;
+            width: 250px;
+            height: 250px;
             margin: 20px auto;
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-size: 12px;
-            text-align: center;
-            line-height: 1.4;
+            background: #FFFFFF;
+            border: 2px solid #E5E7EB;
           }
+          .qr-visual img { max-width: 100%; max-height: 100%; border-radius: 8px; }
           .vehicle-name {
             font-size: 20px;
             font-weight: bold;
@@ -296,7 +238,9 @@ export class PrintService {
             padding: 10px;
             border-radius: 8px;
             border: 1px solid #E5E7EB;
-            word-break: break-all;
+            white-space: nowrap;
+            overflow-x: auto;
+            word-break: normal;
           }
         </style>
       </head>
@@ -304,8 +248,7 @@ export class PrintService {
         <div class="qr-container">
           <div class="vehicle-name">${vehicleName}</div>
           <div class="qr-visual">
-            [QR CODE]<br/>
-            ${qrString}
+            <img src="${qrCodeUrl}" alt="QR Code" />
           </div>
           <div class="qr-code">${qrString}</div>
         </div>
