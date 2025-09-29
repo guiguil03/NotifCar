@@ -1,6 +1,8 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { FirebaseAnalyticsService } from './firebaseAnalytics';
+import { FirebaseMessagingService } from './firebaseMessaging';
 import { supabase } from './supabase';
 
 // Configuration des notifications
@@ -14,6 +16,7 @@ Notifications.setNotificationHandler({
 
 export class NotificationService {
   private static expoPushToken: string | null = null;
+  private static fcmToken: string | null = null;
 
   // Demander les permissions de notification
   static async requestPermissions(): Promise<boolean> {
@@ -49,7 +52,10 @@ export class NotificationService {
       const hasPermission = await this.requestPermissions();
       if (!hasPermission) return null;
 
-      // Obtenir le token push
+      // Configurer Firebase Messaging
+      await this.setupFirebaseMessaging();
+
+      // Obtenir le token push Expo
       const token = await Notifications.getExpoPushTokenAsync({
         projectId: 'ac950a40-2d18-4756-955f-2b1d308b9d4b', // Project ID Expo
       });
@@ -60,10 +66,35 @@ export class NotificationService {
       // Enregistrer le token dans la base de données
       await this.registerPushToken(this.expoPushToken);
 
+      // Log de l'événement d'initialisation des notifications
+      FirebaseAnalyticsService.logEvent('notifications_setup', {
+        platform: Platform.OS,
+        has_expo_token: !!this.expoPushToken,
+        has_fcm_token: !!this.fcmToken
+      });
+
       return this.expoPushToken;
     } catch (error) {
       console.error('Erreur configuration notifications:', error);
+      FirebaseAnalyticsService.logAppError('notification_setup_failed', error?.toString());
       return null;
+    }
+  }
+
+  // Configurer Firebase Messaging
+  private static async setupFirebaseMessaging(): Promise<void> {
+    try {
+      // Configurer l'écoute des messages en premier plan
+      FirebaseMessagingService.setupForegroundMessageListener();
+
+      // Obtenir le token FCM
+      const fcmToken = await FirebaseMessagingService.requestPermissionAndGetToken();
+      if (fcmToken) {
+        this.fcmToken = fcmToken;
+        console.log('Token FCM configuré:', fcmToken);
+      }
+    } catch (error) {
+      console.error('Erreur configuration Firebase Messaging:', error);
     }
   }
 
@@ -146,6 +177,10 @@ export class NotificationService {
     // Gestionnaire pour les notifications reçues
     Notifications.addNotificationReceivedListener(notification => {
       console.log('Notification reçue:', notification);
+      
+      // Log analytics pour notification reçue
+      const notificationType = notification.request.content.data?.type || 'unknown';
+      FirebaseAnalyticsService.logNotificationReceived(notificationType);
     });
 
     // Gestionnaire pour les interactions avec les notifications
@@ -153,10 +188,18 @@ export class NotificationService {
       console.log('Interaction notification:', response);
       const data = response.notification.request.content.data;
       
+      // Log analytics pour notification ouverte
+      const notificationType = data?.type || 'unknown';
+      FirebaseAnalyticsService.logNotificationOpened(notificationType);
+      
       // Navigation vers la conversation si c'est un message
       if (data?.conversationId) {
         // Ici tu peux ajouter la logique de navigation
         console.log('Navigation vers conversation:', data.conversationId);
+        FirebaseAnalyticsService.logEvent('notification_navigation', {
+          destination: 'conversation',
+          conversation_id: data.conversationId
+        });
       }
     });
   }
@@ -180,6 +223,11 @@ export class NotificationService {
   // Obtenir le token push actuel
   static getExpoPushToken(): string | null {
     return this.expoPushToken;
+  }
+
+  // Obtenir le token FCM actuel
+  static getFCMToken(): string | null {
+    return this.fcmToken;
   }
 
   // Envoyer une notification de nouveau message

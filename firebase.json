@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "960249373749",
+    "project_id": "notifcar-4115c",
+    "storage_bucket": "notifcar-4115c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:960249373749:android:7f1b8c9e8d9e7f1b853d7c",
+        "android_client_info": {
+          "package_name": "com.glafay.notifcar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA3V3u5S4pICnfwTwyo6OxWKmAh-n0U3Uo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

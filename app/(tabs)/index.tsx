@@ -1,3 +1,4 @@
+// import { QuickAnalyticsTest } from '@/components/QuickAnalyticsTest';
 import { ThemedText } from '@/components/ThemedText';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -192,6 +193,8 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Composant de test Firebase Analytics - TEMPORAIRE */}
+        {/* <QuickAnalyticsTest /> */}
         {/* Action principale avec animation de pulsation */}
         <Animated.View 
           style={[
