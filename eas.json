@@ -9,13 +9,13 @@
       "distribution": "internal",
       "android": {
         "gradleCommand": ":app:assembleDebug",
-        "buildType": "developmentClient"
+        "buildType": "apk"
       },
       "ios": {
         "buildConfiguration": "Debug"
       },
       "env": {
-        "EXPO_PUBLIC_FIREBASE_VAPID_KEY": "YOUR_VAPID_KEY_HERE"
+        "EXPO_PUBLIC_FIREBASE_VAPID_KEY": "BKt_HLwLyC3hOAousQpIR4SE1ji49541qkR4RwbGBQ56CX1mAxGpJkijmXuoBBHdpcCAFm9z38FC4VS4ekEeSBc"
       }
     },
     "preview": {
@@ -24,7 +24,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_FIREBASE_VAPID_KEY": "YOUR_VAPID_KEY_HERE"
+        "EXPO_PUBLIC_FIREBASE_VAPID_KEY": "BKt_HLwLyC3hOAousQpIR4SE1ji49541qkR4RwbGBQ56CX1mAxGpJkijmXuoBBHdpcCAFm9z38FC4VS4ekEeSBc"
       }
     },
     "production": {
@@ -34,7 +34,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_FIREBASE_VAPID_KEY": "YOUR_VAPID_KEY_HERE"
+        "EXPO_PUBLIC_FIREBASE_VAPID_KEY": "BKt_HLwLyC3hOAousQpIR4SE1ji49541qkR4RwbGBQ56CX1mAxGpJkijmXuoBBHdpcCAFm9z38FC4VS4ekEeSBc"
       }
     }
   },

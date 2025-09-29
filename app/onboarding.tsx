@@ -84,7 +84,7 @@ export default function OnboardingScreen() {
 
   const handleComplete = async () => {
     if (!user?.id) {
-      Alert.alert('Erreur', 'Utilisateur non connecté');
+      Alert.alert('Erreur', 'Désolé, une erreur est survenue dans la création de votre véhicule');
       return;
     }
 
