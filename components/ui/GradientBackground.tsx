@@ -22,15 +22,15 @@ export function GradientBackground({
   const gradientAccent = useThemeColor({}, 'gradientAccent');
 
   const getGradientColors = () => {
-  const violetGradient = ['#1B24A8', '#26C29E'];
+    const violetGradient = ['#1E1B4B', '#312E81', '#4C1D95', '#7C3AED'];
     
     switch (variant) {
       case 'primary':
         return violetGradient;
       case 'secondary':
-      return ['#2633E1', '#1E9B7E', '#26C29E', '#7DDAC5'];
+        return ['#7C3AED', '#4C1D95', '#312E81', '#1E1B4B'];
       case 'accent':
-      return ['#2633E1', '#1E9B7E', '#26C29E'];
+        return ['#7C3AED', '#5B21B6', '#4C1D95'];
       case 'light':
         return ['#E9D5FF', '#DDD6FE', '#C4B5FD'];
       case 'dark':
