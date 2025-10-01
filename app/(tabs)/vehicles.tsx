@@ -2,8 +2,8 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 
 import {
-    PerfectVehicleForm as VehicleForm,
-    VehicleFormData,
+  PerfectVehicleForm as VehicleForm,
+  VehicleFormData,
 } from "@/components/ui/PerfectVehicleForm";
 
 import { QRCodeGenerator } from "@/components/ui/QRCodeGenerator";
@@ -27,13 +27,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import {
-    Alert,
-    Animated,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -847,7 +847,7 @@ export default function VehiclesScreen() {
                   <View style={styles.secondaryActions}>
                     <TouchableOpacity
                       style={styles.secondaryButton}
-                      onPress={() => shareVehicleQR(vehicle)}
+                      onPress={() => printQRCode(vehicle)}
                     >
                       <Ionicons name="share" size={16} color="#6B7280" />
 
