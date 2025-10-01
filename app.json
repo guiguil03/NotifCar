@@ -32,7 +32,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.glafay.notifcar",
-      "googleServicesFile": "./google-services.json",
+      "googleServicesFile": "./google-services(1).json",
       "permissions": [
         "CAMERA",
         "INTERNET",
