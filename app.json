@@ -32,7 +32,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.glafay.notifcar",
-      "googleServicesFile": "./google-services(1).json",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "CAMERA",
         "INTERNET",
@@ -100,6 +100,15 @@
         "@react-native-firebase/messaging",
         {
           "firebaseJsonPath": "./firebase.json"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static",
+            "buildReactNativeFromSource": true
+          }
         }
       ]
     ],
