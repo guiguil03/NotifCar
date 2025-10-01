@@ -392,21 +392,72 @@ export class ChatService {
 
       if (!otherParticipant) return;
 
-      // Récupérer le nom de l'expéditeur
-      const { data: senderData } = await supabase
-        .from('auth.users')
-        .select('email')
-        .eq('id', senderId)
-        .single();
+      // Récupérer les informations de l'expéditeur
+      let senderDisplayName: string;
+      let senderEmail: string = '';
+      
+      // Essayer d'abord de récupérer le profil avec nom personnalisé
+      try {
+        const profile = await supabase
+          .from('user_profiles')
+          .select('public_display_name, show_real_name, first_name, last_name')
+          .eq('user_id', senderId)
+          .single();
 
-      const senderName = senderData?.email || 'Utilisateur';
+        if (profile.data && profile.data.public_display_name && profile.data.public_display_name !== 'Utilisateur NotifCar') {
+          // Utiliser le nom du profil
+          if (profile.data.show_real_name && profile.data.first_name) {
+            const lastName = profile.data.last_name ? ` ${profile.data.last_name.charAt(0)}.` : '';
+            senderDisplayName = `${profile.data.first_name}${lastName}`;
+          } else {
+            senderDisplayName = profile.data.public_display_name;
+          }
+        } else {
+          throw new Error('Pas de profil personnalisé');
+        }
+      } catch (error) {
+        // Fallback : utiliser l'email comme avant
+        const { data: senderData } = await supabase
+          .from('auth.users')
+          .select('email')
+          .eq('id', senderId)
+          .single();
+        
+        senderEmail = senderData?.email || 'Utilisateur';
+        senderDisplayName = senderEmail;
+      }
+
+      // Informations sur le véhicule (comme avant)
+      const vehicleInfo = conversationData.vehicle_brand && conversationData.vehicle_model
+        ? `${conversationData.vehicle_brand} ${conversationData.vehicle_model}`
+        : conversationData.vehicle_license_plate || 'votre véhicule';
+
+      // Créer le titre et le contenu de la notification
+      let notificationTitle: string;
+      let notificationBody: string;
+
+      if (senderEmail && senderDisplayName === senderEmail) {
+        // Format classique : email + véhicule
+        notificationTitle = `Message concernant ${vehicleInfo}`;
+        notificationBody = `De ${senderEmail}: ${message.content}`;
+      } else {
+        // Format avec nom personnalisé
+        notificationTitle = `Message de ${senderDisplayName}`;
+        notificationBody = `À propos de ${vehicleInfo}: ${message.content}`;
+      }
 
       // Envoyer la notification
       await NotificationService.notifyNewMessage(
         otherParticipant.user_id,
-        senderName,
-        message.content,
-        message.conversationId
+        senderDisplayName,
+        notificationBody,
+        message.conversationId,
+        {
+          title: notificationTitle,
+          vehicleInfo: vehicleInfo,
+          senderName: senderDisplayName,
+          senderEmail: senderEmail,
+        }
       );
     } catch (error) {
       console.error('Erreur envoi notification message:', error);

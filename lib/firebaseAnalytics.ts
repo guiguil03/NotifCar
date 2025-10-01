@@ -122,6 +122,10 @@ export class FirebaseAnalyticsService {
     this.logEvent('profile_updated');
   }
 
+  static logProfileFormOpened(): void {
+    this.logEvent('profile_form_opened');
+  }
+
   static logAppError(errorMessage: string, errorCode?: string): void {
     this.logEvent('app_error', {
       error_message: errorMessage,

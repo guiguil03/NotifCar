@@ -1,13 +1,15 @@
 import { ThemedText } from '@/components/ThemedText';
+import { ProfileForm } from '@/components/profile/ProfileForm';
 import { useAuth } from '@/contexts/AuthContext';
 // import { useThemeColor } from '@/hooks/useThemeColor';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { ProfileService, UserProfile } from '@/lib/profileService';
 import { StatsService, UserStats } from '@/lib/statsService';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, RefreshControl, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Modal, RefreshControl, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
@@ -21,6 +23,10 @@ export default function ProfileScreen() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // État pour le profil
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [showProfileForm, setShowProfileForm] = useState(false);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -38,14 +44,23 @@ export default function ProfileScreen() {
     
     try {
       setLoading(true);
-      const userStats = await StatsService.getUserStats(user.id);
+      const [userStats, profile] = await Promise.all([
+        StatsService.getUserStats(user.id),
+        ProfileService.getCurrentUserProfile()
+      ]);
       setStats(userStats);
+      setUserProfile(profile);
     } catch (error) {
-      console.error('Erreur chargement statistiques:', error);
-      Alert.alert('Erreur', 'Impossible de charger les statistiques');
+      console.error('Erreur chargement données:', error);
+      Alert.alert('Erreur', 'Impossible de charger les données');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleProfileUpdated = (updatedProfile: UserProfile) => {
+    setUserProfile(updatedProfile);
+    setShowProfileForm(false);
   };
 
   const onRefresh = async () => {
@@ -123,8 +138,31 @@ export default function ProfileScreen() {
           Profil
         </ThemedText>
         <ThemedText style={{ fontSize: 15, color: 'rgba(255,255,255,0.9)' }}>
-          {user?.user_metadata?.full_name || 'Utilisateur'} • {user?.email || 'email@example.com'}
+          {userProfile?.public_display_name && userProfile.public_display_name !== 'Utilisateur NotifCar' 
+            ? userProfile.public_display_name 
+            : user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Utilisateur'
+          } • {user?.email || 'email@example.com'}
         </ThemedText>
+        
+        {/* Bouton personnaliser profil (optionnel) */}
+        <TouchableOpacity
+          onPress={() => setShowProfileForm(true)}
+          style={{
+            backgroundColor: 'rgba(255,255,255,0.2)',
+            borderRadius: 20,
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+            marginTop: 12,
+            alignSelf: 'flex-start',
+            flexDirection: 'row',
+            alignItems: 'center',
+          }}
+        >
+          <Ionicons name="person-circle-outline" size={16} color="white" />
+          <ThemedText style={{ color: 'white', marginLeft: 6, fontSize: 14, fontWeight: '600' }}>
+            {userProfile?.profile_completed ? 'Modifier le profil' : 'Compléter le profil'}
+          </ThemedText>
+        </TouchableOpacity>
       </LinearGradient>
 
       <ScrollView 
@@ -402,6 +440,19 @@ export default function ProfileScreen() {
           </ThemedText>
         </Animated.View>
       </ScrollView>
+
+      {/* Modal pour le formulaire de profil */}
+      <Modal
+        visible={showProfileForm}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowProfileForm(false)}
+      >
+        <ProfileForm
+          onProfileUpdated={handleProfileUpdated}
+          onClose={() => setShowProfileForm(false)}
+        />
+      </Modal>
     </View>
   );
 }
