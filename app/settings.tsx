@@ -1,3 +1,4 @@
+// Composants de test supprimés - notifications FCM fonctionnelles
 import { ThemedText } from '@/components/ThemedText';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppSettings, SettingsService } from '@/lib/settingsService';
@@ -22,6 +23,7 @@ export default function SettingsScreen() {
     refreshInterval: 5,
   });
   const [loading, setLoading] = useState(true);
+  // États pour les testeurs supprimés
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -286,6 +288,8 @@ export default function SettingsScreen() {
                 value={settings.vibrationEnabled}
                 onValueChange={(value) => updateSetting('vibrationEnabled', value)}
               />
+              
+              {/* Boutons de test supprimés - notifications FCM opérationnelles */}
             </LinearGradient>
           </View>
         </Animated.View>
@@ -406,6 +410,8 @@ export default function SettingsScreen() {
           </View>
         </Animated.View>
       </ScrollView>
+
+      {/* Modales de test supprimées - notifications FCM opérationnelles */}
     </View>
   );
 }
@@ -571,5 +577,39 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  testNotificationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
   },
 });

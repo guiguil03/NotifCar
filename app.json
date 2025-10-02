@@ -12,7 +12,8 @@
       "eas": {
         "projectId": "55f6b8d7-59e3-43b2-979c-1145b429c1b1"
       },
-      "router": {}
+      "router": {},
+      "EXPO_PUBLIC_FCM_SERVER_KEY": "AIzaSyAPDIsytvsC7BSFCti1RrsYsuxi50604w4"
     },
     "ios": {
       "supportsTablet": true,
@@ -23,6 +24,9 @@
         "NSPhotoLibraryUsageDescription": "NotifCar needs photo access to let you upload or save images.",
         "NSUserTrackingUsageDescription": "NotifCar uses this permission to provide a better experience with notifications.",
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "aps-environment": "development"
       }
     },
     "android": {
@@ -34,17 +38,15 @@
       "package": "com.glafay.notifcar",
       "googleServicesFile": "./google-services.json",
       "permissions": [
-        "CAMERA",
-        "INTERNET",
-        "VIBRATE",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "POST_NOTIFICATIONS",
-        "WAKE_LOCK",
-        "com.google.android.c2dm.permission.RECEIVE",
         "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.VIBRATE",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.WAKE_LOCK",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "com.google.android.c2dm.permission.RECEIVE",
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
         "android.permission.ACCESS_MEDIA_LOCATION",
         "android.permission.READ_MEDIA_IMAGES"
@@ -100,15 +102,6 @@
         "@react-native-firebase/messaging",
         {
           "firebaseJsonPath": "./firebase.json"
-        }
-      ],
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "useFrameworks": "static",
-            "buildReactNativeFromSource": true
-          }
         }
       ]
     ],

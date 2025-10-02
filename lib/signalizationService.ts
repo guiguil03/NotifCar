@@ -1,3 +1,5 @@
+import { NotificationService } from './notificationService';
+import { ProfileService } from './profileService';
 import { supabase } from './supabase';
 
 export interface Signalization {
@@ -60,10 +62,61 @@ export class SignalizationService {
         throw new Error('Signalisation créée mais impossible à récupérer');
       }
 
+      // Envoyer une notification au propriétaire du véhicule
+      try {
+        await this.sendVehicleAlertNotification(signalization);
+      } catch (notificationError) {
+        console.error('Erreur envoi notification signalisation:', notificationError);
+        // Ne pas faire échouer la création si la notification échoue
+      }
+
       return signalization;
     } catch (error) {
       console.error('Erreur création signalisation:', error);
       throw new Error('Impossible de créer la signalisation');
+    }
+  }
+
+  /**
+   * Envoyer une notification d'alerte de véhicule
+   */
+  private static async sendVehicleAlertNotification(signalization: Signalization): Promise<void> {
+    try {
+      // Récupérer les informations du véhicule
+      const { data: vehicleData } = await supabase
+        .from('vehicles')
+        .select('owner_id, brand, model, license_plate')
+        .eq('id', signalization.vehicle_id)
+        .single();
+
+      if (!vehicleData) {
+        console.log('Véhicule non trouvé pour la notification');
+        return;
+      }
+
+      // Récupérer le nom d'affichage du rapporteur
+      const reporterName = await ProfileService.getDisplayNameForMessage(signalization.reporter_id);
+
+      // Créer les informations du véhicule
+      const vehicleInfo = vehicleData.brand && vehicleData.model
+        ? `${vehicleData.brand} ${vehicleData.model}`
+        : vehicleData.license_plate || 'votre véhicule';
+
+      // Envoyer la notification d'alerte
+      await NotificationService.notifyVehicleAlert(
+        vehicleData.owner_id,
+        reporterName,
+        vehicleInfo,
+        signalization.reason_type,
+        signalization.urgency_level,
+        signalization.conversation_id || '',
+        signalization.custom_message
+      );
+
+      console.log('Notification d\'alerte véhicule envoyée avec succès');
+    } catch (error) {
+      console.error('Erreur envoi notification alerte véhicule:', error);
+      throw error;
     }
   }
 
