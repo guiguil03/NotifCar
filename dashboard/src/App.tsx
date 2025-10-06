@@ -67,14 +67,14 @@ function App() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [users, setUsers] = useState<User[]>([])
-  const [signalizations, setSignalizations] = useState<any[]>([])
-  const [notificationTokens, setNotificationTokens] = useState<any[]>([])
-  const [popularBrands, setPopularBrands] = useState<any[]>([])
+  const [signalizations, setSignalizations] = useState<unknown[]>([])
+  const [notificationTokens, setNotificationTokens] = useState<unknown[]>([])
+  const [popularBrands, setPopularBrands] = useState<unknown[]>([])
   const [conversations, setConversations] = useState<Conversation[]>([])
-  const [signalizationsByDay, setSignalizationsByDay] = useState<any[]>([])
-  const [signalizationTypes, setSignalizationTypes] = useState<any[]>([])
-  const [engagementByHour, setEngagementByHour] = useState<any[]>([])
-  const [growthStats, setGrowthStats] = useState<any>({})
+  const [signalizationsByDay, setSignalizationsByDay] = useState<unknown[]>([])
+  const [signalizationTypes, setSignalizationTypes] = useState<unknown[]>([])
+  const [engagementByHour, setEngagementByHour] = useState<unknown[]>([])
+  const [growthStats, setGrowthStats] = useState<Record<string, unknown>>({})
   const [activeTab, setActiveTab] = useState<'overview' | 'vehicles' | 'users' | 'conversations' | 'signalizations' | 'analytics' | 'charts'>('overview')
   const [, setLoading] = useState(true)
   const [sessionReady, setSessionReady] = useState(false)
@@ -118,7 +118,7 @@ function App() {
       try {
         const signalizationsData = await AdminService.getSignalizationsWithNames()
         setSignalizations(signalizationsData)
-      } catch (error) {
+      } catch (_error) {
         console.log('Signalizations non disponibles')
         setSignalizations([])
       }
@@ -126,7 +126,7 @@ function App() {
       try {
         const tokensData = await AdminService.getNotificationTokens()
         setNotificationTokens(tokensData)
-      } catch (error) {
+      } catch (_error) {
         console.log('Tokens non disponibles')
         setNotificationTokens([])
       }
@@ -134,7 +134,7 @@ function App() {
       try {
         const convData = await AdminService.getAllConversationsWithNames()
         setConversations(convData)
-      } catch (error) {
+      } catch (_error) {
         console.log('Conversations non disponibles')
         setConversations([])
       }
@@ -142,7 +142,7 @@ function App() {
       try {
         const brandsData = await AdminService.getPopularBrands()
         setPopularBrands(brandsData)
-      } catch (error) {
+      } catch (_error) {
         console.log('Brands non disponibles')
         setPopularBrands([])
       }
@@ -159,7 +159,7 @@ function App() {
         setSignalizationTypes(signalTypes)
         setEngagementByHour(engagement)
         setGrowthStats(growth)
-      } catch (error) {
+      } catch (_error) {
         console.log('Données graphiques non disponibles')
       }
     } catch (error) {
@@ -175,7 +175,7 @@ function App() {
         await AdminService.deleteVehicle(vehicleId)
         await loadDashboardData() // Recharger les données
         alert('Véhicule supprimé avec succès')
-      } catch (error) {
+      } catch (_error) {
         alert('Erreur lors de la suppression')
       }
     }
@@ -185,7 +185,7 @@ function App() {
     try {
       await AdminService.toggleVehicleStatus(vehicleId, !currentStatus)
       await loadDashboardData() // Recharger les données
-    } catch (error) {
+    } catch (_error) {
       alert('Erreur lors de la mise à jour')
     }
   }
