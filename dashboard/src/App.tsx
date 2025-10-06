@@ -48,6 +48,25 @@ type Conversation = {
   created_at: string;
 }
 
+type BrandData = {
+  brand: string;
+  count: number;
+}
+
+type DayData = {
+  date: string;
+  dayName: string;
+  total: number;
+  urgent: number;
+  normal: number;
+  types: Record<string, number>;
+}
+
+type HourData = {
+  hour: string;
+  messages: number;
+}
+
 interface DashboardStats {
   totalVehicles: number
   totalUsers: number
@@ -69,11 +88,11 @@ function App() {
   const [users, setUsers] = useState<User[]>([])
   const [signalizations, setSignalizations] = useState<unknown[]>([])
   const [notificationTokens, setNotificationTokens] = useState<unknown[]>([])
-  const [popularBrands, setPopularBrands] = useState<unknown[]>([])
+  const [popularBrands, setPopularBrands] = useState<BrandData[]>([])
   const [conversations, setConversations] = useState<Conversation[]>([])
-  const [signalizationsByDay, setSignalizationsByDay] = useState<unknown[]>([])
+  const [signalizationsByDay, setSignalizationsByDay] = useState<DayData[]>([])
   const [signalizationTypes, setSignalizationTypes] = useState<unknown[]>([])
-  const [engagementByHour, setEngagementByHour] = useState<unknown[]>([])
+  const [engagementByHour, setEngagementByHour] = useState<HourData[]>([])
   const [growthStats, setGrowthStats] = useState<Record<string, unknown>>({})
   const [activeTab, setActiveTab] = useState<'overview' | 'vehicles' | 'users' | 'conversations' | 'signalizations' | 'analytics' | 'charts'>('overview')
   const [, setLoading] = useState(true)
