@@ -3,7 +3,7 @@ import { VioletButton } from '@/components/ui/VioletButton';
 import { VioletCard } from '@/components/ui/VioletCard';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 export interface VehicleFormData {
@@ -63,12 +63,7 @@ export function VehicleForm({ onSubmit, onCancel, initialData, title = "Ajouter 
     } else if (!/^[A-Z0-9\-\s]{2,10}$/i.test(formData.licensePlate)) {
       newErrors.licensePlate = 'Format de plaque invalide';
     }
-
-    if (formData.year < 1900 || formData.year > new Date().getFullYear() + 1 || isNaN(formData.year)) {
-      newErrors.year = 'Année invalide';
-    }
-
-    setErrors(newErrors);
+   setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
