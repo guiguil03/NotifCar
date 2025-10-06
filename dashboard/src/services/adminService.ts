@@ -137,24 +137,66 @@ export class AdminService {
     }
   }
 
-  // Récupérer toutes les conversations avec détails
+  // Récupérer toutes les conversations (sans jointures pour compatibilité schéma)
   static async getAllConversations() {
     try {
       const { data, error } = await supabase
         .from('conversations')
-        .select(`
-          *,
-          vehicle:vehicles(*),
-          reporter:profiles!conversations_reporter_id_fkey(*),
-          owner:profiles!conversations_owner_id_fkey(*)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (error) throw error
       return data || []
     } catch (error) {
       console.error('Erreur récupération conversations:', error)
-      throw error
+      return []
+    }
+  }
+
+  // Récupérer les conversations enrichies avec emails utilisateurs et plaque
+  static async getAllConversationsWithNames() {
+    try {
+      const conversations = await this.getAllConversations()
+      if (!conversations || conversations.length === 0) return []
+
+      // Collecter les IDs uniques
+      const userIds = Array.from(new Set(
+        conversations.flatMap((c: any) => [c.reporter_id, c.owner_id]).filter(Boolean)
+      )) as string[]
+
+      const vehicleIds = Array.from(new Set(
+        conversations.map((c: any) => c.vehicle_id).filter(Boolean)
+      )) as string[]
+
+      // Récupérer profils
+      const [usersRes, vehiclesRes] = await Promise.all([
+        userIds.length > 0 
+          ? supabase.from('user_profiles').select('id,email,full_name,display_name').in('id', userIds)
+          : Promise.resolve({ data: [] as any[] }),
+        vehicleIds.length > 0
+          ? supabase.from('vehicles').select('id,license_plate').in('id', vehicleIds)
+          : Promise.resolve({ data: [] as any[] })
+      ])
+
+      const users = (usersRes as any).data || []
+      const vehicles = (vehiclesRes as any).data || []
+
+      const userById = new Map<string, string>()
+      users.forEach((u: any) => userById.set(u.id, u.display_name || u.full_name || u.email))
+
+      const vehicleById = new Map<string, string>()
+      vehicles.forEach((v: any) => vehicleById.set(v.id, v.license_plate))
+
+      // Mapper conversations enrichies
+      return conversations.map((c: any) => ({
+        ...c,
+        reporterEmail: c.reporter_id ? (userById.get(c.reporter_id) || c.reporter_id) : null,
+        ownerEmail: c.owner_id ? (userById.get(c.owner_id) || c.owner_id) : null,
+        vehiclePlate: c.vehicle_id ? (vehicleById.get(c.vehicle_id) || c.vehicle_id) : null,
+      }))
+    } catch (error) {
+      console.error('Erreur enrichissement conversations:', error)
+      return []
     }
   }
 
@@ -223,7 +265,7 @@ export class AdminService {
     }
   }
 
-  // Récupérer les signalisations
+  // Récupérer les signalisations (liste simple, on joindra côté UI si besoin)
   static async getSignalizations() {
     try {
       const { data, error } = await supabase
@@ -235,6 +277,56 @@ export class AdminService {
       return data || []
     } catch (error) {
       console.error('Erreur récupération signalisations:', error)
+      return []
+    }
+  }
+
+  // Signalisations enrichies: emails et plaque
+  static async getSignalizationsWithNames() {
+    try {
+      const signals = await this.getSignalizations()
+      if (!signals || signals.length === 0) return []
+
+      const userIds = Array.from(new Set(
+        signals.map((s: any) => s.reporter_id).filter(Boolean)
+      )) as string[]
+
+      const vehicleIds = Array.from(new Set(
+        signals.map((s: any) => s.vehicle_id).filter(Boolean)
+      )) as string[]
+
+      let users: any[] = []
+      let vehicles: any[] = []
+      try {
+        if (userIds.length > 0) {
+          const { data } = await supabase.from('user_profiles').select('id,email').in('id', userIds)
+          users = data || []
+        }
+      } catch (e) {
+        console.warn('Lecture user_profiles refusée par RLS (fallback à IDs)')
+      }
+      try {
+        if (vehicleIds.length > 0) {
+          const { data } = await supabase.from('vehicles').select('id,license_plate').in('id', vehicleIds)
+          vehicles = data || []
+        }
+      } catch (e) {
+        console.warn('Lecture vehicles refusée par RLS (fallback à IDs)')
+      }
+
+      const userById = new Map<string, string>()
+      users.forEach((u: any) => userById.set(u.id, u.email))
+
+      const vehicleById = new Map<string, string>()
+      vehicles.forEach((v: any) => vehicleById.set(v.id, v.license_plate))
+
+      return signals.map((s: any) => ({
+        ...s,
+        reporterEmail: s.reporter_id ? (userById.get(s.reporter_id) || s.reporter_id) : null,
+        vehiclePlate: s.vehicle_id ? (vehicleById.get(s.vehicle_id) || s.vehicle_id) : null,
+      }))
+    } catch (error) {
+      console.error('Erreur enrichissement signalisations:', error)
       return []
     }
   }

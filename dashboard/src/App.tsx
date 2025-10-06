@@ -7,6 +7,12 @@ import {
   SignalizationsChart,
   SignalizationTypesChart
 } from './components/Charts'
+import ConversationsTable from './components/ConversationsTable'
+import Header from './components/Header'
+import Login from './components/Login'
+import Sidebar from './components/Sidebar'
+import SignalizationsTable from './components/SignalizationsTable'
+import { supabase } from './lib/supabase'
 import { AdminService } from './services/adminService'
 
 // Types définis localement pour éviter les problèmes d'import
@@ -33,6 +39,15 @@ type User = {
   email_verified: boolean;
 }
 
+type Conversation = {
+  id: string;
+  vehicle_id: string | null;
+  reporter_id: string | null;
+  owner_id: string | null;
+  status: 'active' | 'resolved' | 'archived' | string;
+  created_at: string;
+}
+
 interface DashboardStats {
   totalVehicles: number
   totalUsers: number
@@ -55,15 +70,35 @@ function App() {
   const [signalizations, setSignalizations] = useState<any[]>([])
   const [notificationTokens, setNotificationTokens] = useState<any[]>([])
   const [popularBrands, setPopularBrands] = useState<any[]>([])
+  const [conversations, setConversations] = useState<Conversation[]>([])
   const [signalizationsByDay, setSignalizationsByDay] = useState<any[]>([])
   const [signalizationTypes, setSignalizationTypes] = useState<any[]>([])
   const [engagementByHour, setEngagementByHour] = useState<any[]>([])
   const [growthStats, setGrowthStats] = useState<any>({})
   const [activeTab, setActiveTab] = useState<'overview' | 'vehicles' | 'users' | 'conversations' | 'signalizations' | 'analytics' | 'charts'>('overview')
-  const [loading, setLoading] = useState(true)
+  const [, setLoading] = useState(true)
+  const [sessionReady, setSessionReady] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
-    loadDashboardData()
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session)
+      setSessionReady(true)
+      if (session) {
+        loadDashboardData()
+      }
+    })
+    // Initial check
+    supabase.auth.getSession().then(({ data }) => {
+      setIsLoggedIn(!!data.session)
+      setSessionReady(true)
+      if (data.session) {
+        loadDashboardData()
+      }
+    })
+    return () => {
+      authListener.subscription.unsubscribe()
+    }
   }, [])
 
   const loadDashboardData = async () => {
@@ -81,7 +116,7 @@ function App() {
 
       // Charger les données optionnelles
       try {
-        const signalizationsData = await AdminService.getSignalizations()
+        const signalizationsData = await AdminService.getSignalizationsWithNames()
         setSignalizations(signalizationsData)
       } catch (error) {
         console.log('Signalizations non disponibles')
@@ -94,6 +129,14 @@ function App() {
       } catch (error) {
         console.log('Tokens non disponibles')
         setNotificationTokens([])
+      }
+
+      try {
+        const convData = await AdminService.getAllConversationsWithNames()
+        setConversations(convData)
+      } catch (error) {
+        console.log('Conversations non disponibles')
+        setConversations([])
       }
 
       try {
@@ -147,87 +190,28 @@ function App() {
     }
   }
 
-  if (loading) {
+  if (!sessionReady) {
     return (
       <div className="loading">
         <div className="spinner"></div>
-        <p>Chargement du dashboard...</p>
+        <p>Chargement…</p>
       </div>
     )
   }
 
+  if (!isLoggedIn) {
+    return <Login onSuccess={() => loadDashboardData()} />
+  }
+
   return (
     <div className="dashboard">
-      <header className="header">
-        <h1>NotifCar Admin Dashboard</h1>
-        <div className="header-actions">
-          <button onClick={loadDashboardData} className="refresh-btn">
-            🔄 Actualiser
-          </button>
-        </div>
-      </header>
-
-      <div className="sidebar">
-        <div className="sidebar-header">
-          <h2>Navigation</h2>
-        </div>
-        <nav className="nav">
-          <button 
-            className={activeTab === 'overview' ? 'active' : ''} 
-            onClick={() => setActiveTab('overview')}
-          >
-            <span className="nav-icon">📊</span>
-            Vue d'ensemble
-          </button>
-          <button 
-            className={activeTab === 'vehicles' ? 'active' : ''} 
-            onClick={() => setActiveTab('vehicles')}
-          >
-            <span className="nav-icon">🚗</span>
-            Véhicules ({stats?.totalVehicles || 0})
-          </button>
-          <button 
-            className={activeTab === 'users' ? 'active' : ''} 
-            onClick={() => setActiveTab('users')}
-          >
-            <span className="nav-icon">👥</span>
-            Utilisateurs ({stats?.totalUsers || 0})
-          </button>
-          <button 
-            className={activeTab === 'conversations' ? 'active' : ''} 
-            onClick={() => setActiveTab('conversations')}
-          >
-            <span className="nav-icon">💬</span>
-            Conversations ({stats?.totalConversations || 0})
-          </button>
-          <button 
-            className={activeTab === 'signalizations' ? 'active' : ''} 
-            onClick={() => setActiveTab('signalizations')}
-          >
-            <span className="nav-icon">🚨</span>
-            Signalisations ({stats?.totalSignalizations || 0})
-          </button>
-          <button 
-            className={activeTab === 'analytics' ? 'active' : ''} 
-            onClick={() => setActiveTab('analytics')}
-          >
-            <span className="nav-icon">📈</span>
-            Analytics
-          </button>
-          <button 
-            className={activeTab === 'charts' ? 'active' : ''} 
-            onClick={() => setActiveTab('charts')}
-          >
-            <span className="nav-icon">📊</span>
-            Graphiques
-          </button>
-        </nav>
-      </div>
+      <Header onRefresh={loadDashboardData} />
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} stats={stats} />
 
       <main className="main">
         {activeTab === 'overview' && stats && (
           <div className="overview">
-            <h2>📊 Statistiques Générales</h2>
+            <h2> Statistiques Générales</h2>
             <div className="stats-grid">
               <div className="stat-card">
                 <div className="stat-icon">🚗</div>
@@ -299,7 +283,7 @@ function App() {
 
         {activeTab === 'vehicles' && (
           <div className="vehicles">
-            <h2>🚗 Gestion des Véhicules</h2>
+            <h2> Gestion des Véhicules</h2>
             <div className="table-container">
               <table>
                 <thead>
@@ -338,7 +322,7 @@ function App() {
                           className="action-btn delete"
                         >
                           🗑️ Supprimer
-                        </button>
+        </button>
                       </td>
                     </tr>
                   ))}
@@ -350,7 +334,7 @@ function App() {
 
         {activeTab === 'users' && (
           <div className="users">
-            <h2>👥 Gestion des Utilisateurs</h2>
+            <h2> Gestion des Utilisateurs</h2>
             <div className="table-container">
               <table>
                 <thead>
@@ -381,66 +365,11 @@ function App() {
         )}
 
         {activeTab === 'conversations' && (
-          <div className="conversations">
-            <h2>💬 Gestion des Conversations</h2>
-            <p className="coming-soon">Fonctionnalité en cours de développement...</p>
-          </div>
+          <ConversationsTable conversations={conversations} />
         )}
 
         {activeTab === 'signalizations' && (
-          <div className="signalizations">
-            <h2>🚨 Gestion des Signalisations</h2>
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Véhicule</th>
-                    <th>Signaleur</th>
-                    <th>Urgence</th>
-                    <th>Date</th>
-                    <th>Statut</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {signalizations.length > 0 ? signalizations.map((signal, index) => (
-                    <tr key={index}>
-                      <td>{signal.type || 'N/A'}</td>
-                      <td>
-                        {signal.vehicle_id ? 
-                          `Véhicule ${signal.vehicle_id.substring(0, 8)}...` : 
-                          'N/A'
-                        }
-                      </td>
-                      <td>
-                        {signal.reporter_id ? 
-                          `User ${signal.reporter_id.substring(0, 8)}...` : 
-                          'Anonyme'
-                        }
-                      </td>
-                      <td>
-                        <span className={`status ${signal.urgency || 'normal'}`}>
-                          {signal.urgency || 'Normal'}
-                        </span>
-                      </td>
-                      <td>{new Date(signal.created_at).toLocaleDateString('fr-FR')}</td>
-                      <td>
-                        <span className={`status ${signal.status || 'pending'}`}>
-                          {signal.status || 'En attente'}
-                        </span>
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', color: '#6b7280' }}>
-                        Aucune signalisation trouvée
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <SignalizationsTable signalizations={signalizations} />
         )}
 
         {activeTab === 'analytics' && (
@@ -576,8 +505,8 @@ function App() {
                         ? `Croissance hebdomadaire: ${growthStats.weeklyGrowth}%`
                         : 'Calcul en cours...'
                       }
-                    </p>
-                  </div>
+        </p>
+      </div>
                 </div>
 
                 <div className="insight-card">
