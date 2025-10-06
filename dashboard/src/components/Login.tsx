@@ -30,24 +30,28 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
           <label>
             <div className="form-label">Email</div>
             <input
-              className="form-input"
+              className={`form-input ${loading ? 'loading' : ''}`}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="votre@email.com"
+              disabled={loading}
               required
             />
           </label>
           <label>
             <div className="form-label">Mot de passe</div>
             <input
-              className="form-input"
+              className={`form-input ${loading ? 'loading' : ''}`}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="Votre mot de passe"
+              disabled={loading}
               required
             />
           </label>
-          {error && <div style={{ color: 'var(--error)', fontSize: 14 }}>{error}</div>}
+          {error && <div className="login-error">{error}</div>}
           <div className="login-actions">
             <a className="link-muted" href="#" onClick={(e) => e.preventDefault()}>Mot de passe oublié ?</a>
             <button type="submit" className="action-btn" disabled={loading}>
